@@ -20,7 +20,15 @@ Translate any web page with **your own AI API keys**. Chrome and Firefox extensi
 |--------|---------|
 | `chrome/` | Chrome extension source — load unpacked in `chrome://extensions` |
 | `firefox/` | Firefox extension source — load temporary add-on or use XPI |
-| `release/` | Store-ready builds (`malisa-chrome-2.2.0.zip`, `malisa-firefox-2.2.0.xpi`) |
+| `release/chrome/` | Chrome Web Store ZIP (`malisa-chrome-2.2.0.zip`) |
+| `release/firefox/` | Firefox AMO XPI (`malisa-firefox-2.2.0.xpi`) |
+
+**GitHub Releases** are split by browser — see [RELEASES.md](RELEASES.md).
+
+| Release | Tag |
+|---------|-----|
+| Chrome 2.2.0 | `chrome-v2.2.0` |
+| Firefox 2.2.0 | `firefox-v2.2.0` |
 
 Store listing docs (separate folders on disk):
 

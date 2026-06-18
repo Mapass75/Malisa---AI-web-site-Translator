@@ -7,6 +7,7 @@ import archiver from 'archiver';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
 const outRoot = path.resolve(root, '..', 'malisa-chrome-webstore', 'release');
+const gitReleaseRoot = path.resolve(root, '..', 'Malisa---AI-web-site-Translator', 'release', 'chrome');
 
 const EXCLUDE_DIRS = new Set(['node_modules', 'dist', 'release', '.git']);
 const EXCLUDE_FILES = new Set(['package-lock.json', 'malisa-icon-source.png']);
@@ -35,7 +36,9 @@ async function collectFiles(dir, base = '') {
 async function main() {
   const version = await readVersion();
   await mkdir(outRoot, { recursive: true });
+  await mkdir(gitReleaseRoot, { recursive: true });
   const zipPath = path.join(outRoot, `malisa-chrome-${version}.zip`);
+  const gitZipPath = path.join(gitReleaseRoot, `malisa-chrome-${version}.zip`);
   const output = createWriteStream(zipPath);
   const archive = archiver('zip', { zlib: { level: 9 } });
   const done = new Promise((resolve, reject) => {
@@ -49,7 +52,10 @@ async function main() {
   }
   await archive.finalize();
   await done;
+  const { copyFile } = await import('node:fs/promises');
+  await copyFile(zipPath, gitZipPath);
   console.log(`Created ${zipPath}`);
+  console.log(`Copied to ${gitZipPath}`);
 }
 
 main().catch((e) => {
