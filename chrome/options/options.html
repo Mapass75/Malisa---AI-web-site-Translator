@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Malisa — Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 id="pageTitle">Malisa - AI web site Translator</h1>
+        <p id="pageSubtitle"></p>
+      </header>
+
+      <section id="privacyCard" class="card privacy-card hidden">
+        <h2 id="privacyTitle"></h2>
+        <p id="privacyBody" class="privacy-text"></p>
+        <label class="consent-label">
+          <input type="checkbox" id="privacyConsent" />
+          <span id="privacyConsentText"></span>
+          <a href="#" id="privacyPolicyLink"></a>
+          <span id="privacyAgreeText"></span>
+        </label>
+        <button id="acceptPrivacyBtn" class="btn primary"></button>
+      </section>
+
+      <div id="settingsContent">
+        <section class="card">
+          <h2 id="generalTitle"></h2>
+          <div class="field">
+            <label id="labelUiLanguage" for="uiLanguage"></label>
+            <select id="uiLanguage"></select>
+          </div>
+          <div class="field">
+            <label id="labelDefaultLanguage" for="defaultLanguage"></label>
+            <select id="defaultLanguage"></select>
+          </div>
+          <div class="field">
+            <label id="labelActiveProvider" for="activeProvider"></label>
+            <select id="activeProvider"></select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label id="labelBatchSize" for="batchSize"></label>
+              <input type="number" id="batchSize" min="40" max="150" value="120" />
+            </div>
+            <div class="field">
+              <label id="labelParallel" for="parallelRequests"></label>
+              <input type="number" id="parallelRequests" min="1" max="20" value="20" />
+            </div>
+          </div>
+          <span id="batchHint" class="hint"></span>
+          <div class="field">
+            <label id="labelSkipDomains" for="skipDomains"></label>
+            <textarea id="skipDomains" rows="2" placeholder="mail.google.com"></textarea>
+          </div>
+          <div class="field">
+            <label id="labelTranslatorTheme"></label>
+            <div id="translatorThemeToggle" class="theme-segment" role="group">
+              <button type="button" class="theme-segment-btn" data-theme="light" id="settingsThemeLight"></button>
+              <button type="button" class="theme-segment-btn" data-theme="dark" id="settingsThemeDark"></button>
+              <button type="button" class="theme-segment-btn" data-theme="system" id="settingsThemeSystem"></button>
+            </div>
+            <span id="translatorThemeHint" class="hint"></span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 id="cacheTitle"></h2>
+          <label class="consent-label cache-toggle">
+            <input type="checkbox" id="translationCacheEnabled" checked />
+            <span id="translationCacheLabel"></span>
+          </label>
+          <p id="translationCacheHint" class="hint cache-hint"></p>
+          <div class="cache-actions">
+            <span id="translationCacheCount" class="cache-count"></span>
+            <button type="button" id="clearCacheBtn" class="btn secondary"></button>
+            <span id="clearCacheStatus" class="status-text"></span>
+          </div>
+        </section>
+
+        <div class="toolbar">
+          <button id="refreshAllBtn" class="btn secondary"></button>
+          <span id="refreshStatus" class="status-text"></span>
+        </div>
+
+        <div id="providerSections"></div>
+
+        <div class="actions">
+          <button id="saveBtn" class="btn primary"></button>
+          <span id="saveStatus" class="save-status"></span>
+        </div>
+
+        <footer>
+          <p id="footerText"></p>
+          <p><a href="#" id="footerPrivacyLink"></a></p>
+        </footer>
+      </div>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
