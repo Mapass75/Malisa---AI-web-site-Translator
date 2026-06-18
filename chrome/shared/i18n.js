@@ -92,6 +92,23 @@ const MESSAGES = {
     pageNotReady: 'Page is not ready yet',
     translationNotStarted: 'Translation did not start',
     errorPrefix: 'Error: ',
+    contextMenuTranslate: 'Translate with Malisa',
+    selectionPopupTitle: 'Malisa translation',
+    selectionOriginal: 'Original',
+    selectionTranslation: 'Translation',
+    selectionTranslating: 'Translating selection...',
+    selectionClose: 'Close',
+    selectionSpeak: 'Read aloud',
+    selectionTtsError: 'Speech failed: ',
+    selectionTtsTitle: 'Selection popup — text to speech',
+    selectionTtsEnable: 'Show speak buttons in selection popup',
+    selectionTtsEngine: 'Speech engine',
+    selectionTtsEngineBrowser: 'Browser (free, system voice)',
+    selectionTtsEngineOpenai: 'OpenAI API (higher quality)',
+    selectionTtsVoice: 'OpenAI voice',
+    selectionTtsModel: 'OpenAI TTS model',
+    selectionTtsHint:
+      'Speak buttons read the original and translated text. OpenAI TTS uses your OpenAI API key and is billed separately from translation.',
   },
 };
 
@@ -179,6 +196,23 @@ MESSAGES.hr = L({
   pageNotReady: 'Stranica još nije spremna',
   translationNotStarted: 'Prijevod nije pokrenut',
   errorPrefix: 'Greška: ',
+  contextMenuTranslate: 'Prevedi s Malisa',
+  selectionPopupTitle: 'Malisa prijevod',
+  selectionOriginal: 'Original',
+  selectionTranslation: 'Prijevod',
+  selectionTranslating: 'Prevodim označeni tekst...',
+  selectionClose: 'Zatvori',
+  selectionSpeak: 'Pročitaj naglas',
+  selectionTtsError: 'Govor nije uspio: ',
+  selectionTtsTitle: 'Selection popup — čitanje teksta',
+  selectionTtsEnable: 'Prikaži gumbe za govor u popupu za označeni tekst',
+  selectionTtsEngine: 'Motor govora',
+  selectionTtsEngineBrowser: 'Preglednik (besplatno, sistemski glas)',
+  selectionTtsEngineOpenai: 'OpenAI API (bolja kvaliteta)',
+  selectionTtsVoice: 'OpenAI glas',
+  selectionTtsModel: 'OpenAI TTS model',
+  selectionTtsHint:
+    'Gumbi čitaju original i prijevod. OpenAI TTS koristi OpenAI API ključ i naplaćuje se odvojeno od prijevoda.',
 });
 
 MESSAGES.sr = L({
@@ -261,6 +295,23 @@ MESSAGES.sr = L({
   pageNotReady: 'Stranica još nije spremna',
   translationNotStarted: 'Prevod nije pokrenut',
   errorPrefix: 'Greška: ',
+  contextMenuTranslate: 'Prevedi sa Malisa',
+  selectionPopupTitle: 'Malisa prevod',
+  selectionOriginal: 'Original',
+  selectionTranslation: 'Prevod',
+  selectionTranslating: 'Prevođenje označenog teksta...',
+  selectionClose: 'Zatvori',
+  selectionSpeak: 'Pročitaj naglas',
+  selectionTtsError: 'Govor nije uspeo: ',
+  selectionTtsTitle: 'Selection popup — čitanje teksta',
+  selectionTtsEnable: 'Prikaži dugmad za govor u popupu za označeni tekst',
+  selectionTtsEngine: 'Motor govora',
+  selectionTtsEngineBrowser: 'Pregledač (besplatno, sistemski glas)',
+  selectionTtsEngineOpenai: 'OpenAI API (bolji kvalitet)',
+  selectionTtsVoice: 'OpenAI glas',
+  selectionTtsModel: 'OpenAI TTS model',
+  selectionTtsHint:
+    'Dugmad čitaju original i prevod. OpenAI TTS koristi OpenAI API ključ i naplaćuje se odvojeno od prevoda.',
 });
 
 MESSAGES.de = L({
@@ -343,6 +394,23 @@ MESSAGES.de = L({
   pageNotReady: 'Seite ist noch nicht bereit',
   translationNotStarted: 'Übersetzung wurde nicht gestartet',
   errorPrefix: 'Fehler: ',
+  contextMenuTranslate: 'Mit Malisa übersetzen',
+  selectionPopupTitle: 'Malisa Übersetzung',
+  selectionOriginal: 'Original',
+  selectionTranslation: 'Übersetzung',
+  selectionTranslating: 'Auswahl wird übersetzt...',
+  selectionClose: 'Schließen',
+  selectionSpeak: 'Vorlesen',
+  selectionTtsError: 'Sprachausgabe fehlgeschlagen: ',
+  selectionTtsTitle: 'Auswahl-Popup — Sprachausgabe',
+  selectionTtsEnable: 'Vorlese-Buttons im Auswahl-Popup anzeigen',
+  selectionTtsEngine: 'Sprach-Engine',
+  selectionTtsEngineBrowser: 'Browser (kostenlos, Systemstimme)',
+  selectionTtsEngineOpenai: 'OpenAI API (höhere Qualität)',
+  selectionTtsVoice: 'OpenAI-Stimme',
+  selectionTtsModel: 'OpenAI TTS-Modell',
+  selectionTtsHint:
+    'Buttons lesen Original und Übersetzung vor. OpenAI TTS nutzt Ihren OpenAI API-Schlüssel und wird separat abgerechnet.',
 });
 
 MESSAGES.it = L({
@@ -425,6 +493,23 @@ MESSAGES.it = L({
   pageNotReady: 'La pagina non è ancora pronta',
   translationNotStarted: 'Traduzione non avviata',
   errorPrefix: 'Errore: ',
+  contextMenuTranslate: 'Traduci con Malisa',
+  selectionPopupTitle: 'Traduzione Malisa',
+  selectionOriginal: 'Originale',
+  selectionTranslation: 'Traduzione',
+  selectionTranslating: 'Traduzione selezione...',
+  selectionClose: 'Chiudi',
+  selectionSpeak: 'Leggi ad alta voce',
+  selectionTtsError: 'Lettura vocale non riuscita: ',
+  selectionTtsTitle: 'Popup selezione — sintesi vocale',
+  selectionTtsEnable: 'Mostra pulsanti lettura nel popup di selezione',
+  selectionTtsEngine: 'Motore vocale',
+  selectionTtsEngineBrowser: 'Browser (gratuito, voce di sistema)',
+  selectionTtsEngineOpenai: 'OpenAI API (qualità superiore)',
+  selectionTtsVoice: 'Voce OpenAI',
+  selectionTtsModel: 'Modello OpenAI TTS',
+  selectionTtsHint:
+    'I pulsanti leggono originale e traduzione. OpenAI TTS usa la chiave OpenAI ed è fatturato separatamente.',
 });
 
 MESSAGES.fr = L({
@@ -507,6 +592,23 @@ MESSAGES.fr = L({
   pageNotReady: 'La page n\'est pas encore prête',
   translationNotStarted: 'La traduction n\'a pas démarré',
   errorPrefix: 'Erreur : ',
+  contextMenuTranslate: 'Traduire avec Malisa',
+  selectionPopupTitle: 'Traduction Malisa',
+  selectionOriginal: 'Original',
+  selectionTranslation: 'Traduction',
+  selectionTranslating: 'Traduction de la sélection...',
+  selectionClose: 'Fermer',
+  selectionSpeak: 'Lire à voix haute',
+  selectionTtsError: 'Échec de la lecture : ',
+  selectionTtsTitle: 'Popup de sélection — synthèse vocale',
+  selectionTtsEnable: 'Afficher les boutons de lecture dans le popup de sélection',
+  selectionTtsEngine: 'Moteur vocal',
+  selectionTtsEngineBrowser: 'Navigateur (gratuit, voix système)',
+  selectionTtsEngineOpenai: 'OpenAI API (meilleure qualité)',
+  selectionTtsVoice: 'Voix OpenAI',
+  selectionTtsModel: 'Modèle OpenAI TTS',
+  selectionTtsHint:
+    'Les boutons lisent l’original et la traduction. OpenAI TTS utilise votre clé OpenAI et est facturé séparément.',
 });
 
 MESSAGES.es = L({
@@ -589,6 +691,23 @@ MESSAGES.es = L({
   pageNotReady: 'La página aún no está lista',
   translationNotStarted: 'La traducción no se inició',
   errorPrefix: 'Error: ',
+  contextMenuTranslate: 'Traducir con Malisa',
+  selectionPopupTitle: 'Traducción Malisa',
+  selectionOriginal: 'Original',
+  selectionTranslation: 'Traducción',
+  selectionTranslating: 'Traduciendo selección...',
+  selectionClose: 'Cerrar',
+  selectionSpeak: 'Leer en voz alta',
+  selectionTtsError: 'Error de voz: ',
+  selectionTtsTitle: 'Popup de selección — texto a voz',
+  selectionTtsEnable: 'Mostrar botones de voz en el popup de selección',
+  selectionTtsEngine: 'Motor de voz',
+  selectionTtsEngineBrowser: 'Navegador (gratis, voz del sistema)',
+  selectionTtsEngineOpenai: 'OpenAI API (mayor calidad)',
+  selectionTtsVoice: 'Voz OpenAI',
+  selectionTtsModel: 'Modelo OpenAI TTS',
+  selectionTtsHint:
+    'Los botones leen el original y la traducción. OpenAI TTS usa tu clave OpenAI y se factura aparte.',
 });
 
 export function t(key, lang = 'en', vars = {}) {

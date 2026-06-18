@@ -67,6 +67,34 @@
         </section>
 
         <section class="card">
+          <h2 id="selectionTtsTitle"></h2>
+          <label class="consent-label cache-toggle">
+            <input type="checkbox" id="selectionTtsEnabled" checked />
+            <span id="selectionTtsEnableLabel"></span>
+          </label>
+          <div class="field">
+            <label id="labelSelectionTtsEngine" for="selectionTtsEngine"></label>
+            <select id="selectionTtsEngine">
+              <option value="browser" id="selectionTtsEngineBrowserOpt"></option>
+              <option value="openai" id="selectionTtsEngineOpenaiOpt"></option>
+            </select>
+          </div>
+          <div class="field" id="selectionTtsOpenAiFields">
+            <div class="field-row">
+              <div class="field">
+                <label id="labelSelectionTtsVoice" for="selectionTtsVoice"></label>
+                <select id="selectionTtsVoice"></select>
+              </div>
+              <div class="field">
+                <label id="labelSelectionTtsModel" for="selectionTtsModel"></label>
+                <select id="selectionTtsModel"></select>
+              </div>
+            </div>
+          </div>
+          <p id="selectionTtsHint" class="hint cache-hint"></p>
+        </section>
+
+        <section class="card">
           <h2 id="cacheTitle"></h2>
           <label class="consent-label cache-toggle">
             <input type="checkbox" id="translationCacheEnabled" checked />

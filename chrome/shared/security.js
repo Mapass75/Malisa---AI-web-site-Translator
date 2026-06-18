@@ -23,6 +23,20 @@ export function isValidProvider(id) {
   return typeof id === 'string' && PROVIDER_IDS.has(id);
 }
 
+export function validateSelectionText(text) {
+  if (typeof text !== 'string') throw new Error('No text selected');
+  const trimmed = text.trim().slice(0, 4000);
+  if (!trimmed || !/\p{L}/u.test(trimmed)) throw new Error('No text selected');
+  return trimmed;
+}
+
+export function validateTtsText(text) {
+  if (typeof text !== 'string') throw new Error('No text to speak');
+  const trimmed = text.trim().slice(0, 4096);
+  if (!trimmed) throw new Error('No text to speak');
+  return trimmed;
+}
+
 export function validateBlocks(blocks) {
   if (!Array.isArray(blocks) || blocks.length === 0) {
     throw new Error('No text to translate on this page');

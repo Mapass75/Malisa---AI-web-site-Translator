@@ -4,6 +4,7 @@ import { getCachedModels } from '../shared/models.js';
 import { clearTranslationCache, countTranslationCacheEntries } from '../shared/cache.js';
 import { escapeHtml, validateOllamaBaseUrl, sanitizeApiKey, sanitizeHeaderValue } from '../shared/security.js';
 import { UI_LANGUAGES, t } from '../shared/i18n.js';
+import { OPENAI_TTS_MODELS, OPENAI_TTS_VOICES } from '../shared/tts.js';
 
 const uiLanguage = document.getElementById('uiLanguage');
 const privacyCard = document.getElementById('privacyCard');
@@ -19,6 +20,11 @@ const translationCacheEnabled = document.getElementById('translationCacheEnabled
 const translationCacheCount = document.getElementById('translationCacheCount');
 const clearCacheBtn = document.getElementById('clearCacheBtn');
 const clearCacheStatus = document.getElementById('clearCacheStatus');
+const selectionTtsEnabled = document.getElementById('selectionTtsEnabled');
+const selectionTtsEngine = document.getElementById('selectionTtsEngine');
+const selectionTtsVoice = document.getElementById('selectionTtsVoice');
+const selectionTtsModel = document.getElementById('selectionTtsModel');
+const selectionTtsOpenAiFields = document.getElementById('selectionTtsOpenAiFields');
 const providerSections = document.getElementById('providerSections');
 const refreshAllBtn = document.getElementById('refreshAllBtn');
 const refreshStatus = document.getElementById('refreshStatus');
@@ -47,6 +53,14 @@ function applyOptionsI18n() {
   document.getElementById('labelParallel').textContent = t('parallelRequests', lang);
   document.getElementById('batchHint').textContent = t('batchHint', lang);
   document.getElementById('labelSkipDomains').textContent = t('skipDomains', lang);
+  document.getElementById('selectionTtsTitle').textContent = t('selectionTtsTitle', lang);
+  document.getElementById('selectionTtsEnableLabel').textContent = t('selectionTtsEnable', lang);
+  document.getElementById('labelSelectionTtsEngine').textContent = t('selectionTtsEngine', lang);
+  document.getElementById('selectionTtsEngineBrowserOpt').textContent = t('selectionTtsEngineBrowser', lang);
+  document.getElementById('selectionTtsEngineOpenaiOpt').textContent = t('selectionTtsEngineOpenai', lang);
+  document.getElementById('labelSelectionTtsVoice').textContent = t('selectionTtsVoice', lang);
+  document.getElementById('labelSelectionTtsModel').textContent = t('selectionTtsModel', lang);
+  document.getElementById('selectionTtsHint').textContent = t('selectionTtsHint', lang);
   document.getElementById('cacheTitle').textContent = t('cacheTitle', lang);
   document.getElementById('translationCacheLabel').textContent = t('translationCacheEnable', lang);
   document.getElementById('translationCacheHint').textContent = t('translationCacheHint', lang);
@@ -86,6 +100,24 @@ function populateProviders(selected) {
   activeProvider.innerHTML = Object.entries(PROVIDERS)
     .map(([id, p]) => `<option value="${escapeHtml(id)}" ${id === selected ? 'selected' : ''}>${escapeHtml(p.label)}</option>`)
     .join('');
+}
+
+function populateTtsVoices(selected) {
+  selectionTtsVoice.innerHTML = OPENAI_TTS_VOICES.map(
+    (voice) =>
+      `<option value="${voice}" ${voice === selected ? 'selected' : ''}>${escapeHtml(voice)}</option>`
+  ).join('');
+}
+
+function populateTtsModels(selected) {
+  selectionTtsModel.innerHTML = OPENAI_TTS_MODELS.map(
+    (model) =>
+      `<option value="${model}" ${model === selected ? 'selected' : ''}>${escapeHtml(model)}</option>`
+  ).join('');
+}
+
+function updateTtsOpenAiFieldsVisibility() {
+  selectionTtsOpenAiFields.classList.toggle('hidden', selectionTtsEngine.value !== 'openai');
 }
 
 function buildProviderSections() {
@@ -380,6 +412,11 @@ async function loadSettings() {
   parallelRequests.value = String(settings.parallelRequests ?? 20);
   skipDomains.value = settings.skipDomains.join('\n');
   translationCacheEnabled.checked = settings.translationCacheEnabled !== false;
+  selectionTtsEnabled.checked = settings.selectionTtsEnabled !== false;
+  selectionTtsEngine.value = settings.selectionTtsEngine === 'openai' ? 'openai' : 'browser';
+  populateTtsVoices(settings.selectionTtsVoice ?? 'nova');
+  populateTtsModels(settings.selectionTtsModel ?? 'tts-1');
+  updateTtsOpenAiFieldsVisibility();
   setThemeSegmentButtons(settings.translatorTheme ?? 'system');
   await refreshCacheCount();
   for (const [id, config] of Object.entries(settings.providers)) {
@@ -425,6 +462,10 @@ function collectSettings() {
     skipDomains: skipDomains.value.split('\n').map((d) => d.trim()).filter(Boolean),
     translationCacheEnabled: translationCacheEnabled.checked,
     translatorTheme: selectedTranslatorTheme,
+    selectionTtsEnabled: selectionTtsEnabled.checked,
+    selectionTtsEngine: selectionTtsEngine.value === 'openai' ? 'openai' : 'browser',
+    selectionTtsVoice: selectionTtsVoice.value,
+    selectionTtsModel: selectionTtsModel.value,
     providers,
   };
 }
@@ -480,6 +521,8 @@ clearCacheBtn.addEventListener('click', async () => {
     setTimeout(() => { clearCacheStatus.textContent = ''; }, 2500);
   }
 });
+
+selectionTtsEngine.addEventListener('change', updateTtsOpenAiFieldsVisibility);
 
 themeSegmentButtons.forEach((btn) => {
   btn.addEventListener('click', () => setThemeSegmentButtons(btn.dataset.theme));

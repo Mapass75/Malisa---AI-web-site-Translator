@@ -121,6 +121,10 @@ export const DEFAULT_SETTINGS = {
   skipDomains: [],
   translationCacheEnabled: true,
   translatorTheme: 'system',
+  selectionTtsEnabled: true,
+  selectionTtsEngine: 'browser',
+  selectionTtsVoice: 'nova',
+  selectionTtsModel: 'tts-1',
 };
 
 export const LANGUAGES = [

@@ -34,6 +34,10 @@ export async function getSettings() {
     translationCacheEnabled:
       stored.translationCacheEnabled ?? DEFAULT_SETTINGS.translationCacheEnabled,
     translatorTheme: stored.translatorTheme ?? DEFAULT_SETTINGS.translatorTheme,
+    selectionTtsEnabled: stored.selectionTtsEnabled ?? DEFAULT_SETTINGS.selectionTtsEnabled,
+    selectionTtsEngine: stored.selectionTtsEngine ?? DEFAULT_SETTINGS.selectionTtsEngine,
+    selectionTtsVoice: stored.selectionTtsVoice ?? DEFAULT_SETTINGS.selectionTtsVoice,
+    selectionTtsModel: stored.selectionTtsModel ?? DEFAULT_SETTINGS.selectionTtsModel,
     providers,
   };
 }

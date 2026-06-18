@@ -252,6 +252,10 @@ footer {
   display: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 #settingsContent.hidden {
   display: none;
 }
