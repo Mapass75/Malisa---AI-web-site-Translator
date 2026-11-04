@@ -113,6 +113,7 @@ function estimateMaxTokens(blocks) {
 }
 
 const FREE_DEFAULT_URL = 'https://api.mymemory.translated.net/get';
+const GTX_URL = 'https://translate.googleapis.com/translate_a/single';
 
 // Free no-key translation. Default endpoint is MyMemory; the public Google
 // `gtx` API and any LibreTranslate-compatible /translate URL also work.
@@ -140,9 +141,18 @@ function splitForMyMemory(text, maxBytes = 450) {
       chunk = candidate;
     }
     while (new TextEncoder().encode(chunk).length > maxBytes) {
-      const cut = chunk.slice(0, maxBytes).lastIndexOf(' ');
-      parts.push(chunk.slice(0, cut > 50 ? cut : maxBytes));
-      chunk = chunk.slice(cut > 50 ? cut : maxBytes);
+      // Byte-accurate cut: longest prefix within maxBytes, preferring a space,
+      // always ending on a code-point boundary.
+      const enc = new TextEncoder();
+      let prefix = '';
+      for (const ch of chunk) {
+        if (enc.encode(prefix + ch).length > maxBytes) break;
+        prefix += ch;
+      }
+      const space = prefix.lastIndexOf(' ');
+      const cut = space > 50 ? space : prefix.length;
+      parts.push(chunk.slice(0, cut));
+      chunk = chunk.slice(cut);
     }
   }
   if (chunk) parts.push(chunk);
@@ -152,7 +162,9 @@ function splitForMyMemory(text, maxBytes = 450) {
 async function myMemoryOne(baseUrl, text, targetLanguage, sourceLanguage, email) {
   const src = sourceLanguage && sourceLanguage !== 'auto' ? sourceLanguage : null;
   if (!src) {
-    throw new Error('MyMemory needs a source language — pick one instead of Auto-detect');
+    // MyMemory has no autodetect — route this request through the public
+    // Google endpoint, which supports sl=auto.
+    return gtxOne(GTX_URL, text, targetLanguage, 'auto');
   }
   const url =
     `${baseUrl}?q=${encodeURIComponent(text)}&langpair=${src}|${targetLanguage}` +

@@ -90,6 +90,7 @@ function populateTextLanguages(target) {
 let speakingBtn = null;
 let speakingStopBtn = null;
 let currentAudio = null;
+let currentAudioResolve = null;
 let speechStopped = false;
 let speechPaused = false;
 const audioCache = new Map();
@@ -97,6 +98,10 @@ const audioCache = new Map();
 function stopSpeech() {
   window.speechSynthesis?.cancel();
   speechStopped = true;
+  if (currentAudioResolve) {
+    currentAudioResolve();
+    currentAudioResolve = null;
+  }
   if (currentAudio) {
     currentAudio.pause();
     currentAudio = null;
@@ -182,11 +187,17 @@ async function speakRemote(text, engine, btn, stopBtn, cfg, geminiKey) {
     speakingBtn = btn;
     speakingStopBtn = stopBtn;
     stopBtn.hidden = false;
-    await audio.play().catch(() => {});
+    await audio.play(); // propagates playback rejection (e.g. NotAllowedError)
     await new Promise((resolve) => {
-      audio.onended = resolve;
-      audio.onerror = resolve;
-      if (audio.ended) resolve();
+      currentAudioResolve = resolve;
+      audio.onended = audio.onerror = () => {
+        currentAudioResolve = null;
+        resolve();
+      };
+      if (audio.ended) {
+        currentAudioResolve = null;
+        resolve();
+      }
     });
   }
 }

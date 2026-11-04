@@ -628,6 +628,7 @@ async function loadSettings() {
   for (const [id, config] of Object.entries(settings.providers)) {
     if (!providerEls[id]) continue;
     if (providerEls[id].key) providerEls[id].key.value = config.apiKey ?? '';
+    if (providerEls[id].email) providerEls[id].email.value = config.email ?? '';
     updateKeyLink(id);
     if (providerEls[id].baseUrl) {
       providerEls[id].baseUrl.value = config.baseUrl ?? PROVIDERS[id].defaultBaseUrl ?? '';
@@ -711,7 +712,14 @@ async function saveAllSettings() {  const settings = collectSettings();
   }
 
   const free = settings.providers.free;
-  if (free?.baseUrl?.trim() && !/translate\.googleapis\.com/.test(free.baseUrl)) {
+  let freeHost = '';
+  try {
+    freeHost = new URL(free?.baseUrl ?? '').hostname;
+  } catch {
+    freeHost = '';
+  }
+  const isBuiltInFreeHost = /(^|\.)translate\.googleapis\.com$/.test(freeHost) || /(^|\.)mymemory\.translated\.net$/.test(freeHost);
+  if (free?.baseUrl?.trim() && !isBuiltInFreeHost) {
     if (!validateOllamaBaseUrl(free.baseUrl)) {
       throw new Error(t('invalidFreeUrl', lang));
     }
