@@ -163,7 +163,8 @@ async function translateWithGtx(baseUrl, opts) {
 }
 
 async function translateWithLibreTranslate(baseUrl, opts) {
-  const response = await fetch(`${baseUrl}/translate`, {
+  const endpoint = /\/translate\/?$/.test(baseUrl) ? baseUrl : `${baseUrl}/translate`;
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -224,15 +225,31 @@ function parseOllamaBatchOutput(content, opts) {
     const m = line.match(/^\s*[\`'"]?([\w-]+)\s*[|:]\s*(.*)$/);
     if (m) byId.set(m[1], m[2].trim().replace(/^["']|["']$/g, ''));
   }
+  if (byId.size > 0) {
+    // ID-tagged reply: never guess positions — a missing id keeps its
+    // original text rather than borrowing another block's translation.
+    return opts.blocks.map((block) => ({
+      id: block.id,
+      translated: byId.get(String(block.id)) || block.text,
+    }));
+  }
   const lines = cleaned.split('\n').filter((l) => l.trim());
-  return opts.blocks.map((block, i) => {
-    const translated = byId.get(String(block.id)) ?? (lines[i] ? lines[i].replace(/^\s*[\w-]+\s*[|:]\s*/, '').trim() : '');
-    return { id: block.id, translated: translated || block.text };
-  });
+  if (lines.length !== opts.blocks.length) {
+    throw new Error(
+      `Ollama batch parse failed: expected ${opts.blocks.length} translations, got ${lines.length} — the model may not support the batch format`
+    );
+  }
+  return opts.blocks.map((block, i) => ({
+    id: block.id,
+    translated: lines[i].replace(/^\s*[\w-]+\s*[|:]\s*/, '').trim() || block.text,
+  }));
 }
 
 async function ollamaChat(root, opts, messages) {
-  const temperature = Number.isFinite(+opts.temperature) ? +opts.temperature : 0.2;
+  const temperature =
+    opts.temperature === '' || opts.temperature == null || !Number.isFinite(+opts.temperature)
+      ? 0.2
+      : +opts.temperature;
   const timeoutSec = Math.min(600, Math.max(10, +opts.timeout || 120));
   const payload = {
     model: sanitizeHeaderValue(opts.model),
