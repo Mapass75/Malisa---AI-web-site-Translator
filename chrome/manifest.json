@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Malisa - AI web site Translator",
   "short_name": "Malisa",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "description": "Translate any web page with your own AI API keys. Supports OpenAI, Claude, Gemini, Groq, Ollama and more.",
   "permissions": [
     "storage",
@@ -51,7 +51,9 @@
       "js": [
         "content/content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
     }
   ],
   "icons": {
