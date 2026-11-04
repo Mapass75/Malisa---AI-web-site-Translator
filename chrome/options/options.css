@@ -100,6 +100,29 @@ input:focus, select:focus, textarea:focus {
   margin-top: 8px;
 }
 
+.hint.key-link a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.hint.key-link[hidden] {
+  display: none;
+}
+
+.badge {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #2e7d32;
+  background: #2e7d3220;
+  border: 1px solid #2e7d3240;
+  cursor: help;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

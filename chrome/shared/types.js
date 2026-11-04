@@ -87,6 +87,29 @@ export const PROVIDERS = {
     maxChars: 40000,
     batchSize: 100,
   },
+  grok: {
+    label: 'Grok (xAI)',
+    keyPlaceholder: 'xai-...',
+    defaultModel: 'grok-4-fast-non-reasoning',
+    baseUrl: 'https://api.x.ai/v1',
+    type: 'openai',
+    parallel: 14,
+    maxParallel: 14,
+    maxChars: 40000,
+    batchSize: 100,
+  },
+  free: {
+    label: 'Free translate (no key)',
+    defaultBaseUrl: 'https://api.mymemory.translated.net/get',
+    type: 'mymemory',
+    apiKeyOptional: true,
+    noApiKey: true,
+    noModel: true,
+    parallel: 2,
+    maxParallel: 4,
+    maxChars: 1500,
+    batchSize: 25,
+  },
   ollama: {
     label: 'Ollama (local)',
     keyPlaceholder: 'optional',
@@ -101,8 +124,56 @@ export const PROVIDERS = {
   },
 };
 
+// Helper links shown under the API key field in Settings.
+export const PROVIDER_KEY_URLS = {
+  openai: 'https://platform.openai.com/api-keys',
+  anthropic: 'https://console.anthropic.com/settings/keys',
+  google: 'https://aistudio.google.com/apikey',
+  grok: 'https://console.x.ai',
+  deepseek: 'https://platform.deepseek.com/api_keys',
+  openrouter: 'https://openrouter.ai/keys',
+  groq: 'https://console.groq.com/keys',
+  mistral: 'https://console.mistral.ai/api-keys',
+};
+
+export const OLLAMA_DOWNLOAD_URL = 'https://ollama.com/download';
+
+// Free-tier notes shown as a "Free tier" badge. Values may change —
+// `checked` is the date they were last verified.
+export const FREE_TIER_INFO = {
+  groq: 'Free, no card. openai/gpt-oss-120b: 30 requests/min, 1,000/day, 8K tokens/min, 200K tokens/day.',
+  google:
+    'Free tier on several models, no card. Limits are shown in AI Studio. Free-tier content may be used by Google to improve its products, so avoid sensitive text.',
+  openrouter:
+    'Models with IDs ending in :free cost nothing. 20 requests/min, 50/day; 1,000/day after a one-time purchase of 10 credits. Pick a model ending in ":free".',
+  mistral: 'Free mode, no card. Limits are shown in your Mistral admin panel.',
+  free: 'No key. MyMemory: about 5,000 characters/day, 50,000/day if you enter an email.',
+  ollama: 'Free, runs on your computer.',
+};
+export const FREE_TIER_CHECKED = '2026-11-04';
+
+// Text-to-speech engines. 'openai' is kept for the selection-reader feature.
+export const SPEECH_ENGINES = {
+  browser: { label: 'Browser voices', freeInfo: 'Free, built into your browser.' },
+  google: {
+    label: 'Google Cloud TTS',
+    keyUrl: 'https://console.cloud.google.com/apis/library/texttospeech.googleapis.com',
+    freeInfo: 'Needs billing enabled; free monthly quota (about 4M characters for Standard voices).',
+  },
+  gemini: {
+    label: 'Gemini TTS',
+    freeInfo:
+      'Uses the Gemini API key. Free-tier content may be used by Google to improve its products, so avoid sensitive text.',
+  },
+  elevenlabs: {
+    label: 'ElevenLabs',
+    keyUrl: 'https://elevenlabs.io/app/settings/api-keys',
+    freeInfo: 'Free up to about 10,000 characters/month, attribution required, no commercial license.',
+  },
+};
+
 export const DEFAULT_SETTINGS = {
-  defaultLanguage: 'hr',
+  defaultLanguage: 'en',
   uiLanguage: 'en',
   activeProvider: 'openai',
   providers: Object.fromEntries(
@@ -125,6 +196,17 @@ export const DEFAULT_SETTINGS = {
   selectionTtsEngine: 'browser',
   selectionTtsVoice: 'nova',
   selectionTtsModel: 'tts-1',
+  speech: {
+    engine: 'browser',
+    voice: '',
+    rate: 1,
+    pitch: 1,
+    googleKey: '',
+    googleVoice: 'en-US-Standard-A',
+    geminiModel: 'gemini-2.5-flash-preview-tts',
+    elevenlabsKey: '',
+    elevenlabsVoiceId: '',
+  },
 };
 
 export const LANGUAGES = [
@@ -170,7 +252,8 @@ export const PROVIDER_LABELS = Object.fromEntries(
 
 export function isProviderReady(providerId, config) {
   const meta = PROVIDERS[providerId];
-  if (!meta || !config?.model) return false;
+  if (!meta || !config) return false;
+  if (!meta.noModel && !config.model) return false;
   if (meta.apiKeyOptional) return !!config.baseUrl;
   return !!config.apiKey;
 }

@@ -21,7 +21,9 @@ Malisa - AI web site Translator ("Malisa", "the extension") translates web pages
 
 ## Third parties
 
-When you translate, text is sent to the API of the provider you choose (OpenAI, Anthropic, Google, etc.). Their privacy policies and terms apply.
+When you translate, text is sent to the API of the provider you choose (OpenAI, Anthropic, Google, MyMemory, etc.). Their privacy policies and terms apply. Speech (Listen buttons) likewise sends text to the chosen speech provider (Google Cloud TTS, Gemini TTS, or ElevenLabs); browser voices stay on your device.
+
+Note: the Gemini and OpenRouter free tiers may use submitted content to improve their services — avoid sensitive text when using them.
 
 ## Your controls
 

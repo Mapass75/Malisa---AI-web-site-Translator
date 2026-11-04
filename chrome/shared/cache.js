@@ -1,5 +1,6 @@
-export const CACHE_PREFIX = 'tr_v3_';
-const LEGACY_CACHE_PREFIXES = ['tr_v2_', 'tr_cache_'];
+import browser from './browser.js';
+export const CACHE_PREFIX = 'tr_v4_';
+const LEGACY_CACHE_PREFIXES = ['tr_v3_', 'tr_v2_', 'tr_cache_'];
 const MAX_CACHE_ENTRIES = 5000;
 const MAX_L1_ENTRIES = 10000;
 let writesSincePrune = 0;
@@ -19,8 +20,8 @@ async function hashText(text) {
     .join('');
 }
 
-async function cacheKey(text, targetLanguage) {
-  return `${CACHE_PREFIX}${targetLanguage}_${await hashText(text)}`;
+async function cacheKey(text, targetLanguage, sourceLanguage = 'auto') {
+  return `${CACHE_PREFIX}${sourceLanguage}_${targetLanguage}_${await hashText(text)}`;
 }
 
 function l1Get(key) {
@@ -40,30 +41,38 @@ function l1Clear() {
 }
 
 async function pruneCacheIfNeeded() {
-  const all = await chrome.storage.local.get(null);
+  const all = await browser.storage.local.get(null);
   const keys = Object.keys(all).filter(isTranslationCacheKey);
   if (keys.length <= MAX_CACHE_ENTRIES) return;
-  await chrome.storage.local.remove(keys.slice(0, keys.length - MAX_CACHE_ENTRIES));
+  await browser.storage.local.remove(keys.slice(0, keys.length - MAX_CACHE_ENTRIES));
 }
 
 export async function countTranslationCacheEntries() {
-  const all = await chrome.storage.local.get(null);
+  const all = await browser.storage.local.get(null);
   return Object.keys(all).filter(isTranslationCacheKey).length;
 }
 
 export async function clearTranslationCache() {
   l1Clear();
-  const all = await chrome.storage.local.get(null);
+  const all = await browser.storage.local.get(null);
   const keys = Object.keys(all).filter(isTranslationCacheKey);
-  if (keys.length) await chrome.storage.local.remove(keys);
+  if (keys.length) await browser.storage.local.remove(keys);
 }
 
-export async function getCachedTranslations(texts, targetLanguage, enabled = true) {
+export async function getCachedTranslations(
+  texts,
+  targetLanguage,
+  enabled = true,
+  sourceLanguage = 'auto'
+) {
   if (!enabled || !texts.length) return new Map();
 
   const uniqueTexts = [...new Set(texts)];
   const keyPairs = await Promise.all(
-    uniqueTexts.map(async (text) => ({ text, key: await cacheKey(text, targetLanguage) }))
+    uniqueTexts.map(async (text) => ({
+      text,
+      key: await cacheKey(text, targetLanguage, sourceLanguage),
+    }))
   );
 
   const map = new Map();
@@ -79,7 +88,7 @@ export async function getCachedTranslations(texts, targetLanguage, enabled = tru
   }
 
   if (storageMisses.length) {
-    const storageResult = await chrome.storage.local.get(storageMisses.map((m) => m.key));
+    const storageResult = await browser.storage.local.get(storageMisses.map((m) => m.key));
     for (const { text, key } of storageMisses) {
       const cached = storageResult[key];
       if (cached && cached !== text) {
@@ -92,19 +101,24 @@ export async function getCachedTranslations(texts, targetLanguage, enabled = tru
   return map;
 }
 
-export async function cacheTranslations(entries, targetLanguage, enabled = true) {
+export async function cacheTranslations(
+  entries,
+  targetLanguage,
+  enabled = true,
+  sourceLanguage = 'auto'
+) {
   if (!enabled) return;
 
   const updates = {};
   for (const { text, translation } of entries) {
     if (!translation || translation === text) continue;
-    const key = await cacheKey(text, targetLanguage);
+    const key = await cacheKey(text, targetLanguage, sourceLanguage);
     l1Set(key, translation);
     updates[key] = translation;
   }
   if (!Object.keys(updates).length) return;
 
-  await chrome.storage.local.set(updates);
+  await browser.storage.local.set(updates);
   writesSincePrune++;
   if (writesSincePrune >= 8) {
     writesSincePrune = 0;

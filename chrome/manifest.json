@@ -2,9 +2,14 @@
   "manifest_version": 3,
   "name": "Malisa - AI web site Translator",
   "short_name": "Malisa",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Translate any web page with your own AI API keys. Supports OpenAI, Claude, Gemini, Groq, Ollama and more.",
-  "permissions": ["storage", "activeTab", "scripting", "contextMenus"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus"
+  ],
   "host_permissions": [
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",
@@ -13,6 +18,12 @@
     "https://api.groq.com/*",
     "https://api.mistral.ai/*",
     "https://openrouter.ai/*",
+    "https://api.x.ai/*",
+    "https://libretranslate.com/*",
+    "https://api.mymemory.translated.net/*",
+    "https://texttospeech.googleapis.com/*",
+    "https://api.elevenlabs.io/*",
+    "https://translate.googleapis.com/*",
     "http://localhost:11434/*",
     "http://127.0.0.1:11434/*"
   ],
@@ -21,6 +32,7 @@
     "default_title": "Malisa - AI web site Translator",
     "default_icon": {
       "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
@@ -32,13 +44,19 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },

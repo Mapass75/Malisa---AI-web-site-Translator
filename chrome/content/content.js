@@ -1,3 +1,5 @@
+globalThis.browser ??= globalThis.chrome;
+
 if (globalThis.__MALISA_CONTENT_INIT__) {
   /* already loaded */
 } else {
@@ -136,7 +138,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
   }
 
   async function getUiLanguage() {
-    const result = await chrome.storage.local.get('settings');
+    const result = await browser.storage.local.get('settings');
     const lang = result.settings?.uiLanguage;
     return UI_LANG_CODES.has(lang) ? lang : 'en';
   }
@@ -165,7 +167,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
   }
 
   async function loadTranslatorTheme() {
-    const result = await chrome.storage.local.get('settings');
+    const result = await browser.storage.local.get('settings');
     translatorThemePref = result.settings?.translatorTheme ?? 'system';
   }
 
@@ -430,8 +432,8 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
 
   function getTtsSettings() {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: 'GET_TTS_SETTINGS' }, (response) => {
-        if (chrome.runtime.lastError || !response?.ok) {
+      browser.runtime.sendMessage({ type: 'GET_TTS_SETTINGS' }, (response) => {
+        if (browser.runtime.lastError || !response?.ok) {
           resolve({ enabled: true, engine: 'browser', voice: 'nova', model: 'tts-1' });
           return;
         }
@@ -458,12 +460,12 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
 
     if (settings.engine === 'openai') {
       button.disabled = true;
-      chrome.runtime.sendMessage({ type: 'SPEAK_SELECTION', text }, (response) => {
+      browser.runtime.sendMessage({ type: 'SPEAK_SELECTION', text }, (response) => {
         button.disabled = false;
-        if (chrome.runtime.lastError || !response?.ok) {
+        if (browser.runtime.lastError || !response?.ok) {
           button.title =
             t('selectionTtsError', uiLang) +
-            (response?.error || chrome.runtime.lastError?.message || '');
+            (response?.error || browser.runtime.lastError?.message || '');
           stopSelectionTts();
           return;
         }
@@ -850,11 +852,11 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
 
     showOverlay(t('translatingOverlay', uiLang));
 
-    chrome.runtime.sendMessage(
+    browser.runtime.sendMessage(
       { type: 'TRANSLATE_PAGE', blocks: textBlocks, targetLanguage },
       (response) => {
-        if (chrome.runtime.lastError) {
-          showOverlay(t('errorPrefix', uiLang) + chrome.runtime.lastError.message);
+        if (browser.runtime.lastError) {
+          showOverlay(t('errorPrefix', uiLang) + browser.runtime.lastError.message);
           setTimeout(removeOverlay, 4000);
           return;
         }
@@ -866,7 +868,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     );
   }
 
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     switch (message.type) {
       case 'TRANSLATE_PAGE':
         startTranslation(message.targetLanguage);
@@ -924,7 +926,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     }
   });
 
-  chrome.storage.onChanged.addListener((changes, area) => {
+  browser.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local' || !changes.settings?.newValue) return;
     const next = changes.settings.newValue.translatorTheme;
     if (next) {

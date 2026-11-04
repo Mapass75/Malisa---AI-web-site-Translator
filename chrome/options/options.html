@@ -95,6 +95,51 @@
         </section>
 
         <section class="card">
+          <h2 id="speechTitle"></h2>
+          <div class="field">
+            <label id="labelSpeechEngine" for="speechEngine"></label>
+            <select id="speechEngine"></select>
+            <span id="speechEngineInfo" class="hint"></span>
+            <span id="speechEngineLink" class="hint key-link" hidden></span>
+          </div>
+          <div class="field" id="speechBrowserFields">
+            <label id="labelSpeechVoice" for="speechVoice"></label>
+            <select id="speechVoice"></select>
+          </div>
+          <div class="field" id="speechGoogleFields" hidden>
+            <label id="labelSpeechGoogleKey" for="speechGoogleKey"></label>
+            <input type="password" id="speechGoogleKey" autocomplete="off" />
+            <label id="labelSpeechVoiceName" for="speechGoogleVoice"></label>
+            <input type="text" id="speechGoogleVoice" placeholder="en-US-Standard-A" />
+          </div>
+          <div class="field" id="speechGeminiFields" hidden>
+            <label id="labelSpeechGeminiModel" for="speechGeminiModel"></label>
+            <input type="text" id="speechGeminiModel" placeholder="gemini-2.5-flash-preview-tts" />
+            <span class="hint" id="speechGeminiHint"></span>
+          </div>
+          <div class="field" id="speechElevenlabsFields" hidden>
+            <label id="labelSpeechElevenlabsKey" for="speechElevenlabsKey"></label>
+            <input type="password" id="speechElevenlabsKey" autocomplete="off" />
+            <label id="labelSpeechElevenlabsVoice" for="speechElevenlabsVoiceId"></label>
+            <input type="text" id="speechElevenlabsVoiceId" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label id="labelSpeechRate" for="speechRate"></label>
+              <input type="range" id="speechRate" min="0.5" max="2" step="0.1" />
+            </div>
+            <div class="field">
+              <label id="labelSpeechPitch" for="speechPitch"></label>
+              <input type="range" id="speechPitch" min="0.5" max="2" step="0.1" />
+            </div>
+          </div>
+          <div class="cache-actions">
+            <button type="button" id="speechTestBtn" class="btn secondary"></button>
+            <span id="speechTestStatus" class="status-text"></span>
+          </div>
+        </section>
+
+        <section class="card">
           <h2 id="cacheTitle"></h2>
           <label class="consent-label cache-toggle">
             <input type="checkbox" id="translationCacheEnabled" checked />
