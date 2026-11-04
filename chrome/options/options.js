@@ -712,13 +712,17 @@ async function saveAllSettings() {  const settings = collectSettings();
   }
 
   const free = settings.providers.free;
-  let freeHost = '';
+  let freeHost = '', freeSecure = false;
   try {
-    freeHost = new URL(free?.baseUrl ?? '').hostname;
+    const freeUrl = new URL(free?.baseUrl ?? '');
+    freeHost = freeUrl.hostname;
+    freeSecure = freeUrl.protocol === 'https:';
   } catch {
     freeHost = '';
   }
-  const isBuiltInFreeHost = /(^|\.)translate\.googleapis\.com$/.test(freeHost) || /(^|\.)mymemory\.translated\.net$/.test(freeHost);
+  const isBuiltInFreeHost =
+    freeSecure &&
+    (/(^|\.)translate\.googleapis\.com$/.test(freeHost) || /(^|\.)mymemory\.translated\.net$/.test(freeHost));
   if (free?.baseUrl?.trim() && !isBuiltInFreeHost) {
     if (!validateOllamaBaseUrl(free.baseUrl)) {
       throw new Error(t('invalidFreeUrl', lang));
