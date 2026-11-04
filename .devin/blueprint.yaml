@@ -1,5 +1,5 @@
 maintenance: |
-  . ~/.nvm/nvm.sh && npm install
+  . ~/.nvm/nvm.sh && npm install && npm install --no-save playwright
 knowledge:
   - name: build
     contents: |
