@@ -122,9 +122,9 @@ async function translateWithFree(opts) {
   return translateWithLibreTranslate(baseUrl, opts);
 }
 
-async function gtxOne(baseUrl, text, targetLanguage) {
+async function gtxOne(baseUrl, text, targetLanguage, sourceLanguage = 'auto') {
   const url =
-    `${baseUrl}?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}` +
+    `${baseUrl}?client=gtx&sl=${encodeURIComponent(sourceLanguage)}&tl=${encodeURIComponent(targetLanguage)}` +
     `&dt=t&q=${encodeURIComponent(text)}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Free translate ${response.status}`);
@@ -136,7 +136,7 @@ async function gtxOne(baseUrl, text, targetLanguage) {
 
 async function translateWithGtx(baseUrl, opts) {
   const joined = opts.blocks.map((b) => b.text.replace(/\n/g, ' ')).join('\n');
-  const translated = await gtxOne(baseUrl, joined, opts.targetLanguage);
+  const translated = await gtxOne(baseUrl, joined, opts.targetLanguage, opts.sourceLanguage);
   const parts = translated.split('\n');
 
   if (parts.length === opts.blocks.length) {
@@ -150,7 +150,7 @@ async function translateWithGtx(baseUrl, opts) {
   const results = [];
   for (const block of opts.blocks) {
     try {
-      results.push({ id: block.id, translated: (await gtxOne(baseUrl, block.text, opts.targetLanguage)) || block.text });
+      results.push({ id: block.id, translated: (await gtxOne(baseUrl, block.text, opts.targetLanguage, opts.sourceLanguage)) || block.text });
     } catch {
       results.push({ id: block.id, translated: block.text });
     }
@@ -164,7 +164,7 @@ async function translateWithLibreTranslate(baseUrl, opts) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       q: opts.blocks.map((b) => b.text),
-      source: 'auto',
+      source: opts.sourceLanguage ?? 'auto',
       target: opts.targetLanguage,
       format: 'text',
     }),

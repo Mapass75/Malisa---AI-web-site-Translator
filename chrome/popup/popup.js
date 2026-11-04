@@ -17,6 +17,11 @@ const textInput = document.getElementById('textInput');
 const textOutput = document.getElementById('textOutput');
 const translateTextBtn = document.getElementById('translateTextBtn');
 const copyTextBtn = document.getElementById('copyTextBtn');
+const sourceLanguageSelect = document.getElementById('sourceLanguage');
+const textTargetSelect = document.getElementById('textTargetLanguage');
+const swapLangBtn = document.getElementById('swapLangBtn');
+const listenInputBtn = document.getElementById('listenInputBtn');
+const listenOutputBtn = document.getElementById('listenOutputBtn');
 
 let uiLang = 'en';
 let unwatchSystem = () => {};
@@ -35,6 +40,9 @@ function applyPopupI18n() {
   document.getElementById('themeToggle').setAttribute('aria-label', t('translatorTheme', uiLang));
   document.getElementById('textTranslateTitle').textContent = t('translateTextTitle', uiLang);
   textInput.placeholder = t('translateTextPlaceholder', uiLang);
+  listenInputBtn.title = t('listen', uiLang);
+  listenOutputBtn.title = t('listen', uiLang);
+  swapLangBtn.title = t('swapLanguages', uiLang);
   translateTextBtn.textContent = t('translateText', uiLang);
   copyTextBtn.textContent = t('copyText', uiLang);
 }
@@ -64,6 +72,52 @@ function populateLanguages(selected) {
   ).join('');
 }
 
+function populateTextLanguages(target) {
+  textTargetSelect.innerHTML = languageSelect.innerHTML;
+  textTargetSelect.value = target;
+  sourceLanguageSelect.innerHTML =
+    `<option value="auto">${escapeHtml(t('autoDetect', uiLang))}</option>` + languageSelect.innerHTML;
+  sourceLanguageSelect.value = 'auto';
+}
+
+// speechSynthesis: pick a system voice matching the language code.
+let speakingBtn = null;
+function stopSpeech() {
+  window.speechSynthesis?.cancel();
+  if (speakingBtn) {
+    speakingBtn.classList.remove('speaking');
+    speakingBtn = null;
+  }
+}
+
+function speak(text, langCode, btn) {
+  if (!('speechSynthesis' in window)) {
+    showStatus(t('noVoice', uiLang), 'error');
+    return;
+  }
+  if (btn === speakingBtn) {
+    stopSpeech();
+    return;
+  }
+  stopSpeech();
+  const voices = window.speechSynthesis.getVoices();
+  const code = langCode === 'auto' ? '' : (langCode ?? '').toLowerCase();
+  const voice =
+    voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(code)) ??
+    (code ? null : voices[0]);
+  if (!voice) {
+    showStatus(t('noVoice', uiLang), 'error');
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.voice = voice;
+  utterance.lang = voice.lang;
+  utterance.onend = utterance.onerror = () => stopSpeech();
+  btn.classList.add('speaking');
+  speakingBtn = btn;
+  window.speechSynthesis.speak(utterance);
+}
+
 function showStatus(message, type = 'info') {
   statusEl.textContent = message;
   statusEl.className = `status ${type}`;
@@ -81,6 +135,7 @@ async function init() {
 
   const settings = await getSettings();
   populateLanguages(settings.defaultLanguage);
+  populateTextLanguages(settings.defaultLanguage);
   populateProviders(settings.activeProvider);
   providerSelect.value = settings.activeProvider;
   applyTranslatorTheme(settings.translatorTheme ?? 'system');
@@ -169,7 +224,8 @@ async function init() {
       const response = await browser.runtime.sendMessage({
         type: 'TRANSLATE_TEXT',
         text,
-        targetLanguage: languageSelect.value,
+        targetLanguage: textTargetSelect.value,
+        sourceLanguage: sourceLanguageSelect.value,
         provider,
       });
       if (!response?.ok) throw new Error(response?.error ?? 'Translation failed');
@@ -182,6 +238,23 @@ async function init() {
     } finally {
       translateTextBtn.disabled = false;
     }
+  });
+
+  swapLangBtn.addEventListener('click', () => {
+    const source = sourceLanguageSelect.value;
+    if (source === 'auto') return;
+    sourceLanguageSelect.value = textTargetSelect.value;
+    textTargetSelect.value = source;
+  });
+
+  listenInputBtn.addEventListener('click', () => {
+    const text = textInput.value.trim();
+    if (text) speak(text, sourceLanguageSelect.value, listenInputBtn);
+  });
+
+  listenOutputBtn.addEventListener('click', () => {
+    const text = textOutput.textContent.trim();
+    if (text) speak(text, textTargetSelect.value, listenOutputBtn);
   });
 
   copyTextBtn.addEventListener('click', async () => {

@@ -143,15 +143,17 @@ async function resolveProvider(settings, provider = settings.activeProvider) {
   };
 }
 
-async function translateSingleText(text, targetLanguage, providerId) {
+async function translateSingleText(text, targetLanguage, providerId, sourceLanguage = 'auto') {
   const settings = await getCachedSettings();
   const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings, providerId);
   const cached = await getCachedTranslations([text], targetLanguage, cacheEnabled);
   if (cached.has(text)) return cached.get(text);
 
-  const results = await translateBatchWithRetry(provider, { ...translateOpts, targetLanguage }, [
-    { id: '0', text },
-  ]);
+  const results = await translateBatchWithRetry(
+    provider,
+    { ...translateOpts, targetLanguage, sourceLanguage },
+    [{ id: '0', text }]
+  );
   const translated = results[0]?.translated ?? text;
   cacheTranslations([{ text, translation: translated }], targetLanguage, cacheEnabled).catch(
     () => {}
@@ -272,7 +274,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
       if (!isValidLanguage(message.targetLanguage)) {
         throw new Error('Invalid target language');
       }
-      translateSingleText(text, message.targetLanguage, message.provider)
+      translateSingleText(text, message.targetLanguage, message.provider, message.sourceLanguage)
         .then((translated) => sendResponse({ ok: true, translated }))
         .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
     } catch (err) {

@@ -125,7 +125,7 @@ export const PROVIDERS = {
 };
 
 export const DEFAULT_SETTINGS = {
-  defaultLanguage: 'hr',
+  defaultLanguage: 'en',
   uiLanguage: 'en',
   activeProvider: 'openai',
   providers: Object.fromEntries(

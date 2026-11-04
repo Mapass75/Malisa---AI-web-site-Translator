@@ -32,13 +32,26 @@
       </div>
       <section class="text-translate">
         <h2 id="textTranslateTitle" class="text-translate-title"></h2>
-        <textarea id="textInput" rows="3"></textarea>
+        <div class="lang-row">
+          <select id="sourceLanguage" class="lang-select" aria-label="Source language"></select>
+          <button id="swapLangBtn" class="icon-btn" type="button" title="Swap" aria-label="Swap languages">&#8646;</button>
+          <select id="textTargetLanguage" class="lang-select" aria-label="Target language"></select>
+        </div>
+        <div class="text-box">
+          <textarea id="textInput" rows="3"></textarea>
+          <div class="text-actions">
+            <button id="listenInputBtn" class="icon-btn" type="button"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 010 7M18 6a8.5 8.5 0 010 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></button>
+          </div>
+        </div>
         <div class="text-actions">
           <button id="translateTextBtn" class="btn primary btn-compact"></button>
         </div>
-        <div id="textOutput" class="text-output" aria-live="polite"></div>
-        <div class="text-actions">
-          <button id="copyTextBtn" class="btn secondary btn-compact" disabled></button>
+        <div class="text-box">
+          <div id="textOutput" class="text-output" aria-live="polite"></div>
+          <div class="text-actions">
+            <button id="listenOutputBtn" class="icon-btn" type="button"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4V5z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 010 7M18 6a8.5 8.5 0 010 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg></button>
+            <button id="copyTextBtn" class="btn secondary btn-compact" disabled></button>
+          </div>
         </div>
       </section>
       <footer>

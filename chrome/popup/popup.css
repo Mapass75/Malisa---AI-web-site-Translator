@@ -233,3 +233,47 @@ footer a {
   color: #6c63ff;
   text-decoration: none;
 }
+
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.lang-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.icon-btn {
+  padding: 5px 8px;
+  font-size: 13px;
+  line-height: 1;
+  border: 1px solid var(--malisa-border);
+  border-radius: 6px;
+  background: var(--malisa-surface);
+  color: var(--malisa-text);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  border-color: var(--malisa-theme-active);
+}
+
+.icon-btn.speaking {
+  background: var(--malisa-theme-active);
+  border-color: var(--malisa-theme-active);
+  color: #fff;
+}
+
+.text-box textarea,
+.text-box .text-output {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.text-box .text-actions {
+  margin-top: 4px;
+}
