@@ -236,7 +236,7 @@ function parseOllamaBatchOutput(content, opts) {
   const lines = cleaned.split('\n').filter((l) => l.trim());
   if (lines.length !== opts.blocks.length) {
     throw new Error(
-      `Ollama batch parse failed: expected ${opts.blocks.length} translations, got ${lines.length} — the model may not support the batch format`
+      `Ollama batch format mismatch: expected ${opts.blocks.length} translations, got ${lines.length} — the model may not support the batch format`
     );
   }
   return opts.blocks.map((block, i) => ({
