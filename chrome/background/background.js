@@ -408,7 +408,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
             speechEngine,
             text,
             settings.speech,
-            settings.providers?.google?.apiKey
+            {
+              geminiKey: settings.providers?.google?.apiKey,
+              openaiKey: settings.providers?.openai?.apiKey,
+            }
           );
           sendResponse({ ok: true, ...audio });
           return;

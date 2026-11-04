@@ -176,11 +176,19 @@ export async function fetchElevenLabsTts({ text, apiKey, voiceId }) {
   return { audioBase64: arrayBufferToBase64(await response.arrayBuffer()), mimeType: 'audio/mpeg' };
 }
 
-export async function fetchSpeech(engine, text, cfg, geminiKey) {
+export async function fetchSpeech(engine, text, cfg, keys = {}) {
   if (engine === 'google') return fetchGoogleTts({ text, apiKey: cfg.googleKey, voice: cfg.googleVoice });
-  if (engine === 'gemini') return fetchGeminiTts({ text, apiKey: geminiKey, model: cfg.geminiModel });
+  if (engine === 'gemini') return fetchGeminiTts({ text, apiKey: keys.geminiKey, model: cfg.geminiModel });
   if (engine === 'elevenlabs') {
     return fetchElevenLabsTts({ text, apiKey: cfg.elevenlabsKey, voiceId: cfg.elevenlabsVoiceId });
+  }
+  if (engine === 'openai') {
+    return fetchOpenAiSpeech({
+      text,
+      apiKey: keys.openaiKey,
+      voice: OPENAI_TTS_VOICES.includes(cfg.openaiVoice) ? cfg.openaiVoice : 'nova',
+      model: OPENAI_TTS_MODELS.includes(cfg.openaiModel) ? cfg.openaiModel : 'tts-1',
+    });
   }
   throw new Error(`Unknown speech engine: ${engine}`);
 }

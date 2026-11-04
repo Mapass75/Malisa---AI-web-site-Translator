@@ -170,6 +170,10 @@ export const SPEECH_ENGINES = {
     keyUrl: 'https://elevenlabs.io/app/settings/api-keys',
     freeInfo: 'Free up to about 10,000 characters/month, attribution required, no commercial license.',
   },
+  openai: {
+    label: 'OpenAI TTS',
+    freeInfo: 'Uses the OpenAI API key. Paid per character.',
+  },
 };
 
 export const DEFAULT_SETTINGS = {
@@ -206,6 +210,8 @@ export const DEFAULT_SETTINGS = {
     geminiModel: 'gemini-2.5-flash-preview-tts',
     elevenlabsKey: '',
     elevenlabsVoiceId: '',
+    openaiVoice: 'nova',
+    openaiModel: 'tts-1',
   },
 };
 
