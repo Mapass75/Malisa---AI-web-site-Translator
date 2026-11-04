@@ -176,6 +176,126 @@ export async function fetchElevenLabsTts({ text, apiKey, voiceId }) {
   return { audioBase64: arrayBufferToBase64(await response.arrayBuffer()), mimeType: 'audio/mpeg' };
 }
 
+const AZURE_DEFAULT_VOICES = {
+  hr: 'hr-HR-GabrijelaNeural', en: 'en-US-JennyNeural', de: 'de-DE-KatjaNeural',
+  fr: 'fr-FR-DeniseNeural', es: 'es-ES-ElviraNeural', it: 'it-IT-ElsaNeural',
+  pt: 'pt-PT-RaquelNeural', nl: 'nl-NL-ColetteNeural', pl: 'pl-PL-AgnieszkaNeural',
+  cs: 'cs-CZ-VlastaNeural', sr: 'sr-RS-SophieNeural', bs: 'bs-BA-GoranNeural',
+  ru: 'ru-RU-SvetlanaNeural', uk: 'uk-UA-PolinaNeural', ja: 'ja-JP-NanamiNeural',
+  ko: 'ko-KR-SunHiNeural', zh: 'zh-CN-XiaoxiaoNeural', ar: 'ar-SA-ZariyahNeural',
+  tr: 'tr-TR-EmelNeural', sv: 'sv-SE-SofieNeural', da: 'da-DK-ChristelNeural',
+  no: 'nb-NO-PernilleNeural', fi: 'fi-FI-SelmaNeural', hu: 'hu-HU-NoemiNeural',
+  ro: 'ro-RO-AlinaNeural', bg: 'bg-BG-KalinaNeural', el: 'el-GR-AthinaNeural',
+  he: 'he-IL-HilaNeural', hi: 'hi-IN-SwaraNeural', th: 'th-TH-PremwadeeNeural',
+  vi: 'vi-VN-HoaiMyNeural', id: 'id-ID-GadisNeural', sk: 'sk-SK-ViktoriaNeural',
+  sl: 'sl-SI-PetraNeural',
+};
+
+function xmlEscape(text) {
+  return text.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+export async function fetchAzureTts({ text, apiKey, region = 'westeurope', voice, lang = 'en' }) {
+  const cleanKey = sanitizeApiKey(apiKey);
+  if (!cleanKey) throw new Error('Azure Speech API key is not configured');
+  const cleanRegion = (region || 'westeurope').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const voiceName = voice?.trim() ||
+    AZURE_DEFAULT_VOICES[lang.split('-')[0].toLowerCase()] || 'en-US-JennyNeural';
+  const voiceLang = voiceName.split('-').slice(0, 2).join('-');
+  const ssml =
+    `<speak version="1.0" xml:lang="${xmlEscape(voiceLang)}">` +
+    `<voice name="${xmlEscape(voiceName)}">${xmlEscape(text)}</voice></speak>`;
+  const response = await fetch(
+    `https://${cleanRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
+    {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': cleanKey,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+      },
+      body: ssml,
+    }
+  );
+  if (!response.ok) await ttsError(response, 'Azure');
+  return { audioBase64: arrayBufferToBase64(await response.arrayBuffer()), mimeType: 'audio/mpeg' };
+}
+
+// Minimal AWS Signature V4 signer over Web Crypto (service: polly).
+async function sha256Hex(data) {
+  const buf = await crypto.subtle.digest('SHA-256', typeof data === 'string' ? new TextEncoder().encode(data) : data);
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hmacSha256(key, data) {
+  const raw = typeof key === 'string' ? new TextEncoder().encode(key) : key;
+  const cryptoKey = await crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data)));
+}
+
+export async function fetchPollyTts({ text, accessKey, secretKey, region = 'us-east-1', voice = 'Joanna' }) {
+  const ak = sanitizeApiKey(accessKey);
+  const sk = sanitizeApiKey(secretKey);
+  if (!ak || !sk) throw new Error('AWS access key and secret key are not configured');
+  const cleanRegion = (region || 'us-east-1').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const host = `polly.${cleanRegion}.amazonaws.com`;
+  const body = JSON.stringify({ OutputFormat: 'mp3', Text: text, VoiceId: voice });
+
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const dateStamp = amzDate.slice(0, 8);
+  const scope = `${dateStamp}/${cleanRegion}/polly/aws4_request`;
+
+  const canonicalHeaders =
+    `content-type:application/json\nhost:${host}\nx-amz-date:${amzDate}\n`;
+  const canonicalRequest = [
+    'POST', '/v1/speech', '', canonicalHeaders, 'content-type;host;x-amz-date',
+    await sha256Hex(body),
+  ].join('\n');
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, await sha256Hex(canonicalRequest)].join('\n');
+
+  let k = await hmacSha256(`AWS4${sk}`, dateStamp);
+  k = await hmacSha256(k, cleanRegion);
+  k = await hmacSha256(k, 'polly');
+  k = await hmacSha256(k, 'aws4_request');
+  const signature = Array.from(await hmacSha256(k, stringToSign))
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+
+  const response = await fetch(`https://${host}/v1/speech`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Amz-Date': amzDate,
+      Authorization:
+        `AWS4-HMAC-SHA256 Credential=${ak}/${scope}, ` +
+        `SignedHeaders=content-type;host;x-amz-date, Signature=${signature}`,
+    },
+    body,
+  });
+  if (!response.ok) await ttsError(response, 'Polly');
+  return { audioBase64: arrayBufferToBase64(await response.arrayBuffer()), mimeType: 'audio/mpeg' };
+}
+
+export async function fetchCustomTts({ text, baseUrl, apiKey, model, voice }) {
+  const root = (baseUrl || '').trim().replace(/\/+$/, '');
+  if (!root) throw new Error('Custom TTS base URL is not configured');
+  const headers = { 'Content-Type': 'application/json' };
+  const cleanKey = sanitizeApiKey(apiKey);
+  if (cleanKey) headers.Authorization = `Bearer ${cleanKey}`;
+  const response = await fetch(`${root}/audio/speech`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: model || 'tts-1',
+      input: text,
+      voice: voice || 'af_heart',
+      response_format: 'mp3',
+    }),
+  });
+  if (!response.ok) await ttsError(response, 'Custom');
+  return { audioBase64: arrayBufferToBase64(await response.arrayBuffer()), mimeType: 'audio/mpeg' };
+}
+
 export async function fetchSpeech(engine, text, cfg, keys = {}) {
   if (engine === 'google') return fetchGoogleTts({ text, apiKey: cfg.googleKey, voice: cfg.googleVoice });
   if (engine === 'gemini') return fetchGeminiTts({ text, apiKey: keys.geminiKey, model: cfg.geminiModel });
@@ -188,6 +308,24 @@ export async function fetchSpeech(engine, text, cfg, keys = {}) {
       apiKey: keys.openaiKey,
       voice: OPENAI_TTS_VOICES.includes(cfg.openaiVoice) ? cfg.openaiVoice : 'nova',
       model: OPENAI_TTS_MODELS.includes(cfg.openaiModel) ? cfg.openaiModel : 'tts-1',
+    });
+  }
+  if (engine === 'azure') {
+    return fetchAzureTts({
+      text, apiKey: cfg.azureKey, region: cfg.azureRegion,
+      voice: cfg.azureVoice, lang: cfg.lang,
+    });
+  }
+  if (engine === 'polly') {
+    return fetchPollyTts({
+      text, accessKey: cfg.pollyAccessKey, secretKey: cfg.pollySecretKey,
+      region: cfg.pollyRegion, voice: cfg.pollyVoice,
+    });
+  }
+  if (engine === 'custom') {
+    return fetchCustomTts({
+      text, baseUrl: cfg.customBaseUrl, apiKey: cfg.customKey,
+      model: cfg.customModel, voice: cfg.customVoice,
     });
   }
   throw new Error(`Unknown speech engine: ${engine}`);
