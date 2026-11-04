@@ -61,9 +61,11 @@ browser.runtime.onStartup.addListener(() => {
   setupContextMenu().catch(() => {});
   getCachedSettings();
 });
-function notifyTab(tabId, message) {
+function notifyTab(tabId, message, frameId) {
   if (!tabId) return;
-  browser.tabs.sendMessage(tabId, message).catch(() => {});
+  browser.tabs
+    .sendMessage(tabId, message, frameId == null ? {} : { frameId })
+    .catch(() => {});
 }
 
 async function notifyTabEnsured(tabId, message) {
@@ -75,13 +77,13 @@ async function notifyTabEnsured(tabId, message) {
     await browser.tabs.sendMessage(tabId, message);
   }
 }
-function createProgressThrottle(tabId) {
+function createProgressThrottle(tabId, frameId) {
   let last = 0;
   return (done, total) => {
     const now = Date.now();
     if (done < total && now - last < 400) return;
     last = now;
-    notifyTab(tabId, { type: 'TRANSLATION_PROGRESS', done, total });
+    notifyTab(tabId, { type: 'TRANSLATION_PROGRESS', done, total }, frameId);
   };
 }
 
@@ -227,7 +229,7 @@ async function translatePopupText(text, targetLanguage, providerId, sourceLangua
   return result;
 }
 
-async function translateAllBlocks(blocks, targetLanguage, tabId) {
+async function translateAllBlocks(blocks, targetLanguage, tabId, frameId) {
   if (!isValidLanguage(targetLanguage)) {
     throw new Error('Invalid target language');
   }
@@ -252,14 +254,14 @@ async function translateAllBlocks(blocks, targetLanguage, tabId) {
   }
 
   if (cachedResults.length) {
-    notifyTab(tabId, { type: 'APPLY_TRANSLATIONS', results: cachedResults });
+    notifyTab(tabId, { type: 'APPLY_TRANSLATIONS', results: cachedResults }, frameId);
   }
   if (!uncachedBlocks.length) return;
 
   const batches = sortBatchesLargestFirst(
     chunkBlocks(uncachedBlocks, limits.batchSize, limits.maxChars)
   );
-  const onProgress = batches.length > 2 ? createProgressThrottle(tabId) : () => {};
+  const onProgress = batches.length > 2 ? createProgressThrottle(tabId, frameId) : () => {};
 
   translateOpts.targetLanguage = targetLanguage;
 
@@ -270,7 +272,7 @@ async function translateAllBlocks(blocks, targetLanguage, tabId) {
       const { uniqueBlocks, expandResults, cacheEntries } = dedupeBlocks(batch);
       const dedupedResults = await translateBatchWithRetry(provider, translateOpts, uniqueBlocks);
       const translated = expandResults(dedupedResults);
-      notifyTab(tabId, { type: 'APPLY_TRANSLATIONS', results: translated });
+      notifyTab(tabId, { type: 'APPLY_TRANSLATIONS', results: translated }, frameId);
       cacheTranslations(cacheEntries(dedupedResults), targetLanguage, cacheEnabled).catch(() => {});
       return translated;
     },
@@ -325,10 +327,11 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
       return false;
     }
 
-    translateAllBlocks(message.blocks, message.targetLanguage, tabId)
-      .then(() => notifyTab(tabId, { type: 'TRANSLATION_DONE' }))
+    const frameId = sender.frameId;
+    translateAllBlocks(message.blocks, message.targetLanguage, tabId, frameId)
+      .then(() => notifyTab(tabId, { type: 'TRANSLATION_DONE' }, frameId))
       .catch((err) =>
-        notifyTab(tabId, { type: 'TRANSLATION_ERROR', error: sanitizeErrorMessage(err.message) })
+        notifyTab(tabId, { type: 'TRANSLATION_ERROR', error: sanitizeErrorMessage(err.message) }, frameId)
       );
     sendResponse({ ok: true });
     return false;
@@ -407,7 +410,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
           const audio = await fetchSpeech(
             speechEngine,
             text,
-            settings.speech,
+            { ...settings.speech, lang: settings.defaultLanguage },
             {
               geminiKey: settings.providers?.google?.apiKey,
               openaiKey: settings.providers?.openai?.apiKey,

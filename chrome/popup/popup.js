@@ -171,7 +171,7 @@ async function speakWithBrowser(text, langCode, btn, stopBtn, cfg) {
 }
 
 async function speakRemote(text, engine, btn, stopBtn, cfg, keys) {
-  const voiceKey = `${engine}|${cfg.googleVoice}|${cfg.geminiModel}|${cfg.elevenlabsVoiceId}|${cfg.openaiVoice}|${cfg.openaiModel}`;
+  const voiceKey = `${engine}|${cfg.googleVoice}|${cfg.geminiModel}|${cfg.elevenlabsVoiceId}|${cfg.openaiVoice}|${cfg.openaiModel}|${cfg.azureVoice}|${cfg.azureRegion}|${cfg.pollyVoice}|${cfg.pollyRegion}|${cfg.customBaseUrl}|${cfg.customVoice}|${cfg.customModel}`;
   for (const chunk of splitForSpeech(text)) {
     if (speechStopped) return;
     const cacheKey = `${voiceKey}|${chunk}`;
@@ -231,13 +231,20 @@ async function speak(text, langCode, btn, stopBtn) {
     if (engine === 'browser') {
       await speakWithBrowser(text, langCode, btn, stopBtn, cfg);
     } else {
-      await speakRemote(text, engine, btn, stopBtn, cfg, {
+      await speakRemote(text, engine, btn, stopBtn, { ...cfg, lang: langCode }, {
         geminiKey: settings.providers?.google?.apiKey,
         openaiKey: settings.providers?.openai?.apiKey,
       });
     }
   } catch (err) {
     showStatus(err.message, 'error');
+    // Fall back to browser voices if the cloud engine failed and any exist.
+    if (engine !== 'browser' && 'speechSynthesis' in window &&
+        window.speechSynthesis.getVoices().length) {
+      try {
+        await speakWithBrowser(text, langCode, btn, stopBtn, cfg);
+      } catch { /* keep the original error shown */ }
+    }
   }
   // Remote playback awaits each chunk, so reaching here means it's done.
   // Browser speechSynthesis only queues utterances — cleanup happens in onend.
