@@ -47,6 +47,17 @@ const speechElevenlabsKey = document.getElementById('speechElevenlabsKey');
 const speechElevenlabsVoiceId = document.getElementById('speechElevenlabsVoiceId');
 const speechOpenaiVoice = document.getElementById('speechOpenaiVoice');
 const speechOpenaiModel = document.getElementById('speechOpenaiModel');
+const speechAzureKey = document.getElementById('speechAzureKey');
+const speechAzureRegion = document.getElementById('speechAzureRegion');
+const speechAzureVoice = document.getElementById('speechAzureVoice');
+const speechPollyAccessKey = document.getElementById('speechPollyAccessKey');
+const speechPollySecretKey = document.getElementById('speechPollySecretKey');
+const speechPollyRegion = document.getElementById('speechPollyRegion');
+const speechPollyVoice = document.getElementById('speechPollyVoice');
+const speechCustomBaseUrl = document.getElementById('speechCustomBaseUrl');
+const speechCustomKey = document.getElementById('speechCustomKey');
+const speechCustomModel = document.getElementById('speechCustomModel');
+const speechCustomVoice = document.getElementById('speechCustomVoice');
 const speechTestBtn = document.getElementById('speechTestBtn');
 const speechTestStatus = document.getElementById('speechTestStatus');
 const providerSections = document.getElementById('providerSections');
@@ -98,6 +109,19 @@ function applyOptionsI18n() {
   document.getElementById('labelSpeechOpenaiModel').textContent = t('speechOpenaiModel', lang);
   document.getElementById('speechOpenaiHint').textContent = t('speechOpenaiHint', lang);
   document.getElementById('labelSpeechElevenlabsVoice').textContent = t('speechElevenlabsVoice', lang);
+  document.getElementById('labelSpeechAzureKey').textContent = t('speechAzureKey', lang);
+  document.getElementById('labelSpeechAzureRegion').textContent = t('speechAzureRegion', lang);
+  document.getElementById('labelSpeechAzureVoice').textContent = t('speechVoiceName', lang);
+  document.getElementById('speechAzureHint').textContent = t('speechAzureHint', lang);
+  document.getElementById('labelSpeechPollyAccessKey').textContent = t('speechPollyAccessKey', lang);
+  document.getElementById('labelSpeechPollySecretKey').textContent = t('speechPollySecretKey', lang);
+  document.getElementById('labelSpeechPollyRegion').textContent = t('speechAzureRegion', lang);
+  document.getElementById('labelSpeechPollyVoice').textContent = t('speechVoiceName', lang);
+  document.getElementById('speechPollyHint').textContent = t('speechPollyHint', lang);
+  document.getElementById('labelSpeechCustomBaseUrl').textContent = t('serverUrl', lang);
+  document.getElementById('labelSpeechCustomKey').textContent = t('apiKeyOptional', lang);
+  document.getElementById('labelSpeechCustomModel').textContent = t('model', lang);
+  document.getElementById('labelSpeechCustomVoice').textContent = t('speechVoiceName', lang);
   document.getElementById('labelSpeechRate').textContent = t('speechRate', lang);
   document.getElementById('labelSpeechPitch').textContent = t('speechPitch', lang);
   speechTestBtn.textContent = t('speechTest', lang);
@@ -188,6 +212,9 @@ function updateSpeechFields() {
   document.getElementById('speechGeminiFields').hidden = engine !== 'gemini';
   document.getElementById('speechElevenlabsFields').hidden = engine !== 'elevenlabs';
   document.getElementById('speechOpenaiFields').hidden = engine !== 'openai';
+  document.getElementById('speechAzureFields').hidden = engine !== 'azure';
+  document.getElementById('speechPollyFields').hidden = engine !== 'polly';
+  document.getElementById('speechCustomFields').hidden = engine !== 'custom';
   const meta = SPEECH_ENGINES[engine];
   speechEngineInfo.textContent = `${meta.freeInfo} ${t('freeTierChecked', lang, { d: FREE_TIER_CHECKED })}`;
   if (meta.keyUrl) {
@@ -211,6 +238,17 @@ function collectSpeech() {
     elevenlabsVoiceId: speechElevenlabsVoiceId.value.trim(),
     openaiVoice: OPENAI_TTS_VOICES.includes(speechOpenaiVoice.value) ? speechOpenaiVoice.value : 'nova',
     openaiModel: OPENAI_TTS_MODELS.includes(speechOpenaiModel.value) ? speechOpenaiModel.value : 'tts-1',
+    azureKey: sanitizeApiKey(speechAzureKey.value),
+    azureRegion: speechAzureRegion.value.trim() || 'westeurope',
+    azureVoice: speechAzureVoice.value.trim(),
+    pollyAccessKey: sanitizeApiKey(speechPollyAccessKey.value),
+    pollySecretKey: sanitizeApiKey(speechPollySecretKey.value),
+    pollyRegion: speechPollyRegion.value.trim() || 'us-east-1',
+    pollyVoice: speechPollyVoice.value.trim() || 'Joanna',
+    customBaseUrl: speechCustomBaseUrl.value.trim(),
+    customKey: sanitizeApiKey(speechCustomKey.value),
+    customModel: speechCustomModel.value.trim(),
+    customVoice: speechCustomVoice.value.trim(),
   };
 }
 
@@ -631,6 +669,17 @@ async function loadSettings() {
   speechGeminiModel.value = speech.geminiModel ?? 'gemini-2.5-flash-preview-tts';
   speechElevenlabsKey.value = speech.elevenlabsKey ?? '';
   speechElevenlabsVoiceId.value = speech.elevenlabsVoiceId ?? '';
+  speechAzureKey.value = speech.azureKey ?? '';
+  speechAzureRegion.value = speech.azureRegion ?? 'westeurope';
+  speechAzureVoice.value = speech.azureVoice ?? '';
+  speechPollyAccessKey.value = speech.pollyAccessKey ?? '';
+  speechPollySecretKey.value = speech.pollySecretKey ?? '';
+  speechPollyRegion.value = speech.pollyRegion ?? 'us-east-1';
+  speechPollyVoice.value = speech.pollyVoice ?? 'Joanna';
+  speechCustomBaseUrl.value = speech.customBaseUrl ?? '';
+  speechCustomKey.value = speech.customKey ?? '';
+  speechCustomModel.value = speech.customModel ?? '';
+  speechCustomVoice.value = speech.customVoice ?? '';
   speechOpenaiVoice.innerHTML = OPENAI_TTS_VOICES.map((v) => `<option value="${v}">${v}</option>`).join('');
   speechOpenaiModel.innerHTML = OPENAI_TTS_MODELS.map((m) => `<option value="${m}">${m}</option>`).join('');
   speechOpenaiVoice.value = OPENAI_TTS_VOICES.includes(speech.openaiVoice) ? speech.openaiVoice : 'nova';

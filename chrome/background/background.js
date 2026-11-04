@@ -410,7 +410,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
           const audio = await fetchSpeech(
             speechEngine,
             text,
-            settings.speech,
+            { ...settings.speech, lang: settings.defaultLanguage },
             {
               geminiKey: settings.providers?.google?.apiKey,
               openaiKey: settings.providers?.openai?.apiKey,

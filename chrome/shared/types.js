@@ -174,6 +174,21 @@ export const SPEECH_ENGINES = {
     label: 'OpenAI TTS',
     freeInfo: 'Uses the OpenAI API key. Paid per character.',
   },
+  azure: {
+    label: 'Microsoft Azure Speech',
+    keyUrl: 'https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices',
+    freeInfo: 'Free tier (F0): 500,000 characters/month, 20 requests/min.',
+  },
+  polly: {
+    label: 'Amazon Polly',
+    keyUrl: 'https://console.aws.amazon.com/iam/home#/security_credentials',
+    freeInfo:
+      'Free for the first 12 months (5M characters/month), then paid. Use an IAM user with only the polly:SynthesizeSpeech permission.',
+  },
+  custom: {
+    label: 'Custom TTS (self-hosted)',
+    freeInfo: 'Free if you host it yourself (e.g. Kokoro). Check which languages the model supports.',
+  },
 };
 
 export const DEFAULT_SETTINGS = {
@@ -212,6 +227,17 @@ export const DEFAULT_SETTINGS = {
     elevenlabsVoiceId: '',
     openaiVoice: 'nova',
     openaiModel: 'tts-1',
+    azureKey: '',
+    azureRegion: 'westeurope',
+    azureVoice: '',
+    pollyAccessKey: '',
+    pollySecretKey: '',
+    pollyRegion: 'us-east-1',
+    pollyVoice: 'Joanna',
+    customBaseUrl: '',
+    customKey: '',
+    customModel: '',
+    customVoice: '',
   },
 };
 

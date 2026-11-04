@@ -125,6 +125,36 @@
             <select id="speechOpenaiModel"></select>
             <span class="hint" id="speechOpenaiHint"></span>
           </div>
+          <div class="field" id="speechAzureFields" hidden>
+            <label id="labelSpeechAzureKey" for="speechAzureKey"></label>
+            <input type="password" id="speechAzureKey" autocomplete="off" />
+            <label id="labelSpeechAzureRegion" for="speechAzureRegion"></label>
+            <input type="text" id="speechAzureRegion" placeholder="westeurope" />
+            <label id="labelSpeechAzureVoice" for="speechAzureVoice"></label>
+            <input type="text" id="speechAzureVoice" placeholder="hr-HR-GabrijelaNeural" />
+            <span class="hint" id="speechAzureHint"></span>
+          </div>
+          <div class="field" id="speechPollyFields" hidden>
+            <label id="labelSpeechPollyAccessKey" for="speechPollyAccessKey"></label>
+            <input type="password" id="speechPollyAccessKey" autocomplete="off" />
+            <label id="labelSpeechPollySecretKey" for="speechPollySecretKey"></label>
+            <input type="password" id="speechPollySecretKey" autocomplete="off" />
+            <label id="labelSpeechPollyRegion" for="speechPollyRegion"></label>
+            <input type="text" id="speechPollyRegion" placeholder="us-east-1" />
+            <label id="labelSpeechPollyVoice" for="speechPollyVoice"></label>
+            <input type="text" id="speechPollyVoice" placeholder="Joanna" />
+            <span class="hint" id="speechPollyHint"></span>
+          </div>
+          <div class="field" id="speechCustomFields" hidden>
+            <label id="labelSpeechCustomBaseUrl" for="speechCustomBaseUrl"></label>
+            <input type="text" id="speechCustomBaseUrl" placeholder="http://localhost:8880/v1" />
+            <label id="labelSpeechCustomKey" for="speechCustomKey"></label>
+            <input type="password" id="speechCustomKey" autocomplete="off" />
+            <label id="labelSpeechCustomModel" for="speechCustomModel"></label>
+            <input type="text" id="speechCustomModel" placeholder="kokoro" />
+            <label id="labelSpeechCustomVoice" for="speechCustomVoice"></label>
+            <input type="text" id="speechCustomVoice" placeholder="af_heart" />
+          </div>
           <div class="field" id="speechElevenlabsFields" hidden>
             <label id="labelSpeechElevenlabsKey" for="speechElevenlabsKey"></label>
             <input type="password" id="speechElevenlabsKey" autocomplete="off" />
