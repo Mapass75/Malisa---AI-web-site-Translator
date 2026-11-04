@@ -202,7 +202,9 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     'TEXTAREA', 'INPUT', 'SELECT', 'OPTION',
   ]);
 
-  const SKIP_SELECTORS = '[contenteditable="true"], [data-ai-translator-skip], .ai-translator-overlay';
+  const SKIP_SELECTORS =
+    '[contenteditable="true"], [data-ai-translator-skip], .ai-translator-overlay, #malisa-selection-popup, #malisa-selection-backdrop';
+  const ATTRS = ['aria-label', 'title', 'placeholder', 'alt', 'value'];
   const CANDIDATE_SELECTOR =
     'p, h1, h2, h3, h4, h5, h6, li, td, th, dt, dd, blockquote, figcaption, label, article, button, a, span, strong, b, em, i, small, caption, div';
 
@@ -213,6 +215,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
   const blockById = new Map();
   const translationByText = new Map();
   const processedElements = new WeakSet();
+  let nextId = 0;
   let domObserver = null;
   let rescanTimer = null;
 
@@ -229,10 +232,17 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     return !/\p{L}/u.test(text);
   }
 
+  function* querySelectorAllDeep(root, selector) {
+    for (const el of root.querySelectorAll(selector)) {
+      yield el;
+      if (el.shadowRoot) yield* querySelectorAllDeep(el.shadowRoot, selector);
+    }
+  }
+
   function collectCandidateElements() {
     const candidates = [];
 
-    for (const el of document.body.querySelectorAll(CANDIDATE_SELECTOR)) {
+    for (const el of querySelectorAllDeep(document.body, CANDIDATE_SELECTOR)) {
       if (SKIP_TAGS.has(el.tagName)) continue;
       if (el.closest(SKIP_SELECTORS)) continue;
       if (isHiddenElement(el)) continue;
@@ -243,9 +253,23 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       candidates.push(el);
     }
 
+    // Keep innermost elements, but also keep an element that has its own
+    // direct text nodes alongside candidate children (mixed content like
+    // "ad text <a>See more</a>"), so its own text isn't dropped.
     return candidates.filter(
-      (el) => !candidates.some((other) => other !== el && el.contains(other))
+      (el) =>
+        !candidates.some((other) => other !== el && el.contains(other)) ||
+        hasDirectText(el)
     );
+  }
+
+  function hasDirectText(el) {
+    for (const child of el.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE && /\p{L}/u.test(child.textContent)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function collectTextNodes(el) {
@@ -255,6 +279,16 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     while (n) {
       if (n.textContent?.trim()) nodes.push(n);
       n = walker.nextNode();
+    }
+    return nodes;
+  }
+
+  function collectDirectTextNodes(el) {
+    const nodes = [];
+    for (const child of el.childNodes) {
+      if (child.nodeType === Node.TEXT_NODE && child.textContent?.trim()) {
+        nodes.push(child);
+      }
     }
     return nodes;
   }
@@ -270,12 +304,16 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     blockById.clear();
     let index = 0;
 
-    for (const el of collectCandidateElements()) {
-      const text = el.innerText?.trim() ?? '';
-      if (isSkippableText(text)) continue;
-
-      const nodes = collectTextNodes(el);
-      if (!nodes.length) continue;
+    const candidates = new Set(collectCandidateElements());
+    for (const el of candidates) {
+      const directOnly = hasDirectText(el) &&
+        Array.from(el.children).some((c) => candidates.has(c));
+      const nodes = directOnly ? collectDirectTextNodes(el) : collectTextNodes(el);
+      const text = (directOnly
+        ? nodes.map((n) => n.textContent).join(' ')
+        : el.innerText
+      )?.trim() ?? '';
+      if (isSkippableText(text) || !nodes.length) continue;
 
       const id = String(index++);
       const block = { id, el, nodes, originalText: text };
@@ -283,7 +321,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       blockById.set(id, block);
       processedElements.add(el);
 
-      for (const attr of ['aria-label', 'title']) {
+      for (const attr of ATTRS) {
         const attrText = el.getAttribute(attr)?.trim() ?? '';
         if (isSkippableText(attrText) || attrText === text) continue;
         const attrId = String(index++);
@@ -293,6 +331,24 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       }
     }
 
+    // Attributes on elements that aren't text candidates (img alt, input
+    // placeholder, button value).
+    for (const el of querySelectorAllDeep(document.body, '[placeholder],[alt],[value]')) {
+      if (SKIP_TAGS.has(el.tagName) && el.tagName !== 'INPUT') continue;
+      if (el.closest(SKIP_SELECTORS)) continue;
+      for (const attr of ATTRS) {
+        if (attr === 'value' &&
+            (el.tagName !== 'INPUT' || !['button', 'submit', 'reset'].includes(el.type))) continue;
+        const attrText = el.getAttribute(attr)?.trim() ?? '';
+        if (isSkippableText(attrText)) continue;
+        const attrId = String(index++);
+        const attrBlock = { id: attrId, el, nodes: [], originalText: attrText, attr };
+        blocks.push(attrBlock);
+        blockById.set(attrId, attrBlock);
+      }
+    }
+
+    nextId = index;
     return blocks.map(({ id, originalText }) => ({ id, text: originalText }));
   }
 
@@ -337,12 +393,89 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     }
   }
 
+  let pendingRescan = false;
+
+  function extractNewBlocks() {
+    const out = [];
+    const translatedVals = new Set(translationByText.values());
+    const candidates = new Set(collectCandidateElements());
+
+    for (const el of candidates) {
+      if (processedElements.has(el)) continue;
+      const directOnly = hasDirectText(el) &&
+        Array.from(el.children).some((c) => candidates.has(c));
+      const nodes = directOnly ? collectDirectTextNodes(el) : collectTextNodes(el);
+      const text = (directOnly
+        ? nodes.map((n) => n.textContent).join(' ')
+        : el.innerText
+      )?.trim() ?? '';
+      if (isSkippableText(text) || !nodes.length) continue;
+
+      const id = String(nextId++);
+      const block = { id, el, nodes, originalText: text };
+      blocks.push(block);
+      blockById.set(id, block);
+      processedElements.add(el);
+
+      const cachedText = translationByText.get(text);
+      if (cachedText) applyToBlock(block, cachedText);
+      else out.push({ id, text });
+
+      for (const attr of ATTRS) {
+        const attrText = el.getAttribute(attr)?.trim() ?? '';
+        if (isSkippableText(attrText) || attrText === text) continue;
+        const cachedAttr = translationByText.get(attrText);
+        if (cachedAttr) { if (attrText !== cachedAttr) el.setAttribute(attr, cachedAttr); continue; }
+        if (translatedVals.has(attrText)) continue;
+        const attrId = String(nextId++);
+        const attrBlock = { id: attrId, el, nodes: [], originalText: attrText, attr };
+        blocks.push(attrBlock);
+        blockById.set(attrId, attrBlock);
+        out.push({ id: attrId, text: attrText });
+      }
+    }
+
+    for (const el of querySelectorAllDeep(document.body, '[placeholder],[alt],[value]')) {
+      if (el.closest(SKIP_SELECTORS)) continue;
+      for (const attr of ATTRS) {
+        if (attr === 'value' &&
+            (el.tagName !== 'INPUT' || !['button', 'submit', 'reset'].includes(el.type))) continue;
+        const attrText = el.getAttribute(attr)?.trim() ?? '';
+        if (isSkippableText(attrText)) continue;
+        const cachedAttr = translationByText.get(attrText);
+        if (cachedAttr) {
+          if (attrText !== cachedAttr) el.setAttribute(attr, cachedAttr);
+          continue;
+        }
+        if (translatedVals.has(attrText)) continue;
+        const attrId = String(nextId++);
+        const attrBlock = { id: attrId, el, nodes: [], originalText: attrText, attr };
+        blocks.push(attrBlock);
+        blockById.set(attrId, attrBlock);
+        out.push({ id: attrId, text: attrText });
+      }
+    }
+
+    return out;
+  }
+
   function scheduleDomRescan() {
     clearTimeout(rescanTimer);
     rescanTimer = setTimeout(() => {
-      if (!translated) return;
+      if (!translated || pendingRescan) return;
       applyCachedTranslationsToDom();
-    }, 250);
+      const newBlocks = extractNewBlocks();
+      if (!newBlocks.length) return;
+      pendingRescan = true;
+      browser.runtime.sendMessage(
+        { type: 'TRANSLATE_PAGE', blocks: newBlocks, targetLanguage: activeTargetLanguage },
+        () => {
+          pendingRescan = false;
+          if (browser.runtime.lastError) return;
+          scheduleDomRescan();
+        }
+      );
+    }, 400);
   }
 
   function startDomObserver() {
