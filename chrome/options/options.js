@@ -433,7 +433,7 @@ function fillModelSelect(providerId, models, selectedModel) {
   const select = providerEls[providerId].model;
   if (!models?.length) {
     select.innerHTML = selectedModel
-      ? `<option value="${selectedModel}">${selectedModel}</option>`
+      ? `<option value="${escapeHtml(selectedModel)}">${escapeHtml(selectedModel)}</option>`
       : '';
     return;
   }
