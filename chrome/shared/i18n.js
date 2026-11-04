@@ -78,6 +78,10 @@ const MESSAGES = {
     defaultHint: 'default',
     ollamaCorsNote:
       'If requests are blocked, start Ollama with OLLAMA_ORIGINS=chrome-extension://*,moz-extension://* — see README.',
+    noApiKey: 'No API key?',
+    getKeyHere: 'Get one here',
+    noOllama: "Don't have Ollama?",
+    downloadOllama: 'Download it here',
     ollamaModelRequired: 'Enter or select an Ollama model name',
     ollamaUrlRequired: 'Enter the Ollama server URL',
     ollamaManualModel: 'Server unreachable or no models pulled — type a model name above and save',

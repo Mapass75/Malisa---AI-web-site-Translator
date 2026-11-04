@@ -1,6 +1,6 @@
 import browser from '../shared/browser.js';
 import { getSettings, saveSettings, hasPrivacyConsent, setPrivacyConsent } from '../shared/storage.js';
-import { LANGUAGES, PROVIDERS } from '../shared/types.js';
+import { LANGUAGES, PROVIDERS, PROVIDER_KEY_URLS, OLLAMA_DOWNLOAD_URL } from '../shared/types.js';
 import { getCachedModels } from '../shared/models.js';
 import { clearTranslationCache, countTranslationCacheEntries } from '../shared/cache.js';
 import { escapeHtml, validateOllamaBaseUrl, sanitizeApiKey, sanitizeHeaderValue } from '../shared/security.js';
@@ -177,7 +177,8 @@ function buildProviderSections() {
                 <input type="number" id="${id}Timeout" min="10" max="600" placeholder="120" />
               </div>
             </div>
-            <span class="hint">${t('ollamaCorsNote', lang)}</span>`
+            <span class="hint">${t('ollamaCorsNote', lang)}</span>
+            <span class="hint key-link">${t('noOllama', lang)} <a href="${OLLAMA_DOWNLOAD_URL}" target="_blank" rel="noopener noreferrer">${t('downloadOllama', lang)}</a></span>`
           : `<div class="field">
               <label for="${id}Model">${t('model', lang)}</label>
               <div class="model-row">
@@ -198,6 +199,11 @@ function buildProviderSections() {
           <button type="button" class="btn secondary btn-compact" id="${id}Test">${t('testConnection', lang)}</button>
         </div>
         <span class="key-status" id="${id}KeyStatus"></span>
+        ${
+          PROVIDER_KEY_URLS[id]
+            ? `<span class="hint key-link" id="${id}KeyLink">${t('noApiKey', lang)} <a href="${PROVIDER_KEY_URLS[id]}" target="_blank" rel="noopener noreferrer">${t('getKeyHere', lang)}</a></span>`
+            : ''
+        }
       </div>`;
 
       return `
@@ -232,8 +238,11 @@ function buildProviderSections() {
       providerEls[id].baseUrl = document.getElementById(`${id}BaseUrl`);
       providerEls[id].baseUrl.addEventListener('change', () => refreshProviderModels(id, true));
     }
+    providerEls[id].keyLink = document.getElementById(`${id}KeyLink`);
     providerEls[id].refresh?.addEventListener('click', () => refreshProviderModels(id, true));
     providerEls[id].key?.addEventListener('change', () => refreshProviderModels(id, true));
+    providerEls[id].key?.addEventListener('input', () => updateKeyLink(id));
+    updateKeyLink(id);
     providerEls[id].toggleKey?.addEventListener('click', () => toggleKeyVisibility(id));
     providerEls[id].clearKey?.addEventListener('click', () => clearApiKey(id));
     providerEls[id].test?.addEventListener('click', () => testProviderConnection(id));
@@ -308,6 +317,12 @@ function updateToggleKeyLabels(providerId) {
   btn.setAttribute('aria-label', label);
 }
 
+function updateKeyLink(providerId) {
+  const el = providerEls[providerId]?.keyLink;
+  if (!el) return;
+  el.hidden = !!(providerEls[providerId].key?.value ?? '').trim();
+}
+
 function toggleKeyVisibility(providerId) {
   const input = providerEls[providerId].key;
   input.type = input.type === 'password' ? 'text' : 'password';
@@ -317,6 +332,7 @@ function toggleKeyVisibility(providerId) {
 function clearApiKey(providerId) {
   providerEls[providerId].key.value = '';
   providerEls[providerId].key.type = 'password';
+  updateKeyLink(providerId);
   updateToggleKeyLabels(providerId);
   setKeyStatus(providerId, '');
 }
@@ -467,6 +483,7 @@ async function loadSettings() {
   for (const [id, config] of Object.entries(settings.providers)) {
     if (!providerEls[id]) continue;
     if (providerEls[id].key) providerEls[id].key.value = config.apiKey ?? '';
+    updateKeyLink(id);
     if (providerEls[id].baseUrl) {
       providerEls[id].baseUrl.value = config.baseUrl ?? PROVIDERS[id].defaultBaseUrl ?? '';
     }

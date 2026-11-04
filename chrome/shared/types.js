@@ -124,6 +124,20 @@ export const PROVIDERS = {
   },
 };
 
+// Helper links shown under the API key field in Settings.
+export const PROVIDER_KEY_URLS = {
+  openai: 'https://platform.openai.com/api-keys',
+  anthropic: 'https://console.anthropic.com/settings/keys',
+  google: 'https://aistudio.google.com/apikey',
+  grok: 'https://console.x.ai',
+  deepseek: 'https://platform.deepseek.com/api_keys',
+  openrouter: 'https://openrouter.ai/keys',
+  groq: 'https://console.groq.com/keys',
+  mistral: 'https://console.mistral.ai/api-keys',
+};
+
+export const OLLAMA_DOWNLOAD_URL = 'https://ollama.com/download';
+
 export const DEFAULT_SETTINGS = {
   defaultLanguage: 'en',
   uiLanguage: 'en',
