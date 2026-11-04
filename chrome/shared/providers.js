@@ -182,47 +182,129 @@ async function translateWithLibreTranslate(baseUrl, opts) {
   }));
 }
 
-async function translateWithOllama(opts) {
-  const baseUrl = ollamaOpenAiBase(opts.baseUrl || 'http://localhost:11434/v1');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...buildAuthHeaders(opts.apiKey),
-  };
-  const model = sanitizeHeaderValue(opts.model);
+// ---- Ollama (native /api/chat) ----
+
+function ollamaRoot(baseUrl) {
+  return (baseUrl || 'http://localhost:11434/v1').replace(/\/v1\/?$/, '').replace(/\/$/, '');
+}
+
+function stripThinkBlocks(text) {
+  return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+}
+
+function isTranslateGemma(model) {
+  return /translategemma/i.test(model || '');
+}
+
+function ollamaLanguageName(code) {
+  return code && code !== 'auto' ? getLanguageName(code) : null;
+}
+
+function ollamaSystemPrompt(opts) {
+  const lang = ollamaLanguageName(opts.targetLanguage) ?? opts.targetLanguage;
+  const from = ollamaLanguageName(opts.sourceLanguage);
+  if (isTranslateGemma(opts.model)) {
+    return `You are a professional translator. Translate the user's text ${from ? `from ${from} ` : ''}to ${lang}. Output only the translation.`;
+  }
+  if (opts.blocks.length === 1) {
+    return `Translate ${from ? `from ${from} ` : ''}to ${lang}. Output only the translation.`;
+  }
+  return `Translate each line ${from ? `from ${from} ` : ''}to ${lang}. Output only the translations: one line per input, same order, formatted as "id|translation".`;
+}
+
+function ollamaUserContent(opts) {
+  if (opts.blocks.length === 1) return opts.blocks[0].text;
+  return opts.blocks.map((b) => `${b.id}|${b.text}`).join('\n');
+}
+
+function parseOllamaBatchOutput(content, opts) {
+  const cleaned = stripThinkBlocks(content);
+  const byId = new Map();
+  for (const line of cleaned.split('\n')) {
+    const m = line.match(/^\s*[\`'"]?([\w-]+)\s*[|:]\s*(.*)$/);
+    if (m) byId.set(m[1], m[2].trim().replace(/^["']|["']$/g, ''));
+  }
+  const lines = cleaned.split('\n').filter((l) => l.trim());
+  return opts.blocks.map((block, i) => {
+    const translated = byId.get(String(block.id)) ?? (lines[i] ? lines[i].replace(/^\s*[\w-]+\s*[|:]\s*/, '').trim() : '');
+    return { id: block.id, translated: translated || block.text };
+  });
+}
+
+async function ollamaChat(root, opts, messages) {
+  const temperature = Number.isFinite(+opts.temperature) ? +opts.temperature : 0.2;
+  const timeoutSec = Math.min(600, Math.max(10, +opts.timeout || 120));
   const payload = {
-    model,    temperature: 0,
+    model: sanitizeHeaderValue(opts.model),
+    messages,
     stream: false,
-    messages: [
-      { role: 'system', content: SYSTEM },
-      { role: 'user', content: buildPrompt(opts.blocks, opts.targetLanguage, opts.sourceLanguage) },
-    ],
+    options: {
+      temperature,
+      ...(opts.numCtx ? { num_ctx: +opts.numCtx } : {}),
+    },
+    ...(opts.keepAlive ? { keep_alive: opts.keepAlive } : {}),
   };
 
-  const post = (withJsonFormat) =>
-    fetch(`${baseUrl}/chat/completions`, {
+  let response;
+  try {
+    response = await fetch(`${root}/api/chat`, {
       method: 'POST',
-      headers,
-      body: JSON.stringify(withJsonFormat ? { ...payload, format: 'json' } : payload),
+      headers: { 'Content-Type': 'application/json', ...buildAuthHeaders(opts.apiKey) },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(timeoutSec * 1000),
     });
+  } catch (err) {
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      throw new Error(`Ollama request timed out after ${timeoutSec}s — try a smaller batch or model`);
+    }
+    throw new Error(
+      'Ollama is not running or CORS is blocked — set OLLAMA_ORIGINS=chrome-extension://*,moz-extension://* and restart Ollama (see README)'
+    );
+  }
 
-  let response = await post(true);
+  if (response.status === 404) {
+    throw new Error(`Model not found — run: ollama pull ${opts.model}`);
+  }
   if (!response.ok) {
     const errText = await response.text();
-    if (response.status === 400 && /format|json/i.test(errText)) {
-      response = await post(false);
-      if (!response.ok) throw new Error(`Ollama ${response.status}: ${await response.text()}`);
-    } else {
-      throw new Error(`Ollama ${response.status}: ${errText}`);
+    if (response.status === 403 || /cors|forbidden origin/i.test(errText)) {
+      throw new Error(
+        'CORS blocked — set OLLAMA_ORIGINS=chrome-extension://*,moz-extension://* and restart Ollama (see README)'
+      );
     }
+    throw new Error(`Ollama ${response.status}: ${errText}`);
   }
 
   const data = await response.json();
-  return parseTranslationResponse(data.choices?.[0]?.message?.content ?? '{}', opts.blocks, opts.targetLanguage);
+  return data.message?.content ?? '';
 }
 
-function ollamaOpenAiBase(baseUrl) {
-  const trimmed = (baseUrl || 'http://localhost:11434/v1').replace(/\/$/, '');
-  return trimmed.endsWith('/v1') ? trimmed : `${trimmed}/v1`;
+async function ollamaTranslateOne(root, opts, block) {
+  const content = await ollamaChat(root, opts, [
+    { role: 'system', content: ollamaSystemPrompt({ ...opts, blocks: [block] }) },
+    { role: 'user', content: block.text },
+  ]);
+  return { id: block.id, translated: stripThinkBlocks(content) || block.text };
+}
+
+async function translateWithOllama(opts) {
+  if (!opts.model?.trim()) throw new Error('Enter an Ollama model name in Settings (e.g. gemma3:12b)');
+  const root = ollamaRoot(opts.baseUrl);
+
+  // Single block (popup / selection): one minimal request.
+  if (opts.blocks.length === 1 || isTranslateGemma(opts.model)) {
+    const results = [];
+    for (const block of opts.blocks) {
+      results.push(await ollamaTranslateOne(root, opts, block));
+    }
+    return results;
+  }
+
+  const content = await ollamaChat(root, opts, [
+    { role: 'system', content: ollamaSystemPrompt(opts) },
+    { role: 'user', content: ollamaUserContent(opts) },
+  ]);
+  return parseOllamaBatchOutput(content, opts);
 }
 
 async function translateOpenAICompatible(baseUrl, apiKey, model, blocks, targetLanguage, sourceLanguage, extraHeaders = {}) {

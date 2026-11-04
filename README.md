@@ -75,6 +75,20 @@ npm run build:chrome      # → dist/chrome/ + release/chrome/*.zip
 npm run build:firefox     # → dist/firefox/ + release/firefox/*.xpi
 ```
 
+## Ollama (local models, no API key)
+
+Malisa works with any local Ollama model — Gemma, TranslateGemma, DeepSeek, Qwen, Llama, Mistral, uncensored/abliterated variants, etc.
+
+1. Install and run [Ollama](https://ollama.com), then pull a model, e.g. `ollama pull gemma3:12b`.
+2. **CORS**: Ollama must allow the extension origin. Start it with:
+   ```bash
+   OLLAMA_ORIGINS="chrome-extension://*,moz-extension://*" ollama serve
+   ```
+   On Windows set the `OLLAMA_ORIGINS` environment variable in System settings, then restart Ollama.
+3. In Settings → **Ollama (local)**: keep the default URL `http://localhost:11434`, click ↻ to load installed models from `/api/tags`, or type any model name yourself. Use **Test connection** to verify.
+4. Hugging Face models: any GGUF model can be installed directly — `ollama run hf.co/<user>/<repo>` (e.g. `ollama run hf.co/bartowski/gemma-2-9b-it-GGUF`). Type the same `hf.co/...` name in the model field.
+5. Options per install: temperature (default 0.2), context size `num_ctx`, `keep_alive`, request timeout. Reasoning models' `<think>` blocks are stripped automatically; TranslateGemma uses its own translation prompt preset.
+
 ## Privacy
 
 See [PRIVACY.md](PRIVACY.md).

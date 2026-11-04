@@ -156,7 +156,28 @@ function buildProviderSections() {
               </div>
               <span class="hint">${t('ollamaModelHint', lang)}</span>
               <span class="model-status" id="${id}Status">${statusHint}</span>
-            </div>`
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="${id}Temperature">${t('ollamaTemperature', lang)}</label>
+                <input type="number" id="${id}Temperature" min="0" max="2" step="0.1" placeholder="0.2" />
+              </div>
+              <div class="field">
+                <label for="${id}NumCtx">${t('ollamaNumCtx', lang)}</label>
+                <input type="number" id="${id}NumCtx" min="512" step="512" placeholder="${t('defaultHint', lang)}" />
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="${id}KeepAlive">${t('ollamaKeepAlive', lang)}</label>
+                <input type="text" id="${id}KeepAlive" placeholder="5m" />
+              </div>
+              <div class="field">
+                <label for="${id}Timeout">${t('ollamaTimeout', lang)}</label>
+                <input type="number" id="${id}Timeout" min="10" max="600" placeholder="120" />
+              </div>
+            </div>
+            <span class="hint">${t('ollamaCorsNote', lang)}</span>`
           : `<div class="field">
               <label for="${id}Model">${t('model', lang)}</label>
               <div class="model-row">
@@ -202,6 +223,10 @@ function buildProviderSections() {
     };
     if (id === 'ollama') {
       providerEls[id].modelList = document.getElementById(`${id}ModelList`);
+      providerEls[id].temperature = document.getElementById(`${id}Temperature`);
+      providerEls[id].numCtx = document.getElementById(`${id}NumCtx`);
+      providerEls[id].keepAlive = document.getElementById(`${id}KeepAlive`);
+      providerEls[id].timeout = document.getElementById(`${id}Timeout`);
     }
     if (PROVIDERS[id].defaultBaseUrl) {
       providerEls[id].baseUrl = document.getElementById(`${id}BaseUrl`);
@@ -346,6 +371,12 @@ function getProviderConfig(providerId) {
   if (providerEls[providerId].baseUrl) {
     config.baseUrl = providerEls[providerId].baseUrl.value.trim() || PROVIDERS[providerId].defaultBaseUrl;
   }
+  if (providerId === 'ollama') {
+    config.temperature = providerEls[providerId].temperature?.value;
+    config.numCtx = providerEls[providerId].numCtx?.value;
+    config.keepAlive = providerEls[providerId].keepAlive?.value?.trim();
+    config.timeout = providerEls[providerId].timeout?.value;
+  }
   return config;
 }
 
@@ -440,6 +471,12 @@ async function loadSettings() {
       providerEls[id].baseUrl.value = config.baseUrl ?? PROVIDERS[id].defaultBaseUrl ?? '';
     }
     if (!PROVIDERS[id].noModel) fillModelSelect(id, null, config.model);
+    if (id === 'ollama') {
+      providerEls.ollama.temperature.value = config.temperature ?? '';
+      providerEls.ollama.numCtx.value = config.numCtx ?? '';
+      providerEls.ollama.keepAlive.value = config.keepAlive ?? '';
+      providerEls.ollama.timeout.value = config.timeout ?? '';
+    }
   }
 
   await Promise.all(

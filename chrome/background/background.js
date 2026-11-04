@@ -138,6 +138,14 @@ async function resolveProvider(settings, provider = settings.activeProvider) {
       apiKey: providerConfig.apiKey,
       model: providerConfig.model,
       baseUrl: providerConfig.baseUrl,
+      ...(provider === 'ollama'
+        ? {
+            temperature: providerConfig.temperature,
+            numCtx: providerConfig.numCtx,
+            keepAlive: providerConfig.keepAlive,
+            timeout: providerConfig.timeout,
+          }
+        : {}),
     },
     cacheEnabled: settings.translationCacheEnabled !== false,
   };
@@ -182,30 +190,40 @@ function validatePopupText(text) {
   return trimmed;
 }
 
-// Split long popup input at paragraph/space boundaries and rejoin.
+// Split long popup input at paragraph/space boundaries; the exact separator
+// is kept so the translated chunks can be reassembled faithfully. Fixed-length
+// fallback cuts are moved to a code-point boundary to avoid splitting
+// surrogate pairs (e.g. emoji).
 function chunkPopupText(text) {
   const chunks = [];
   let remaining = text;
   while (remaining.length > POPUP_CHUNK_SIZE) {
     let cut = remaining.lastIndexOf('\n', POPUP_CHUNK_SIZE);
+    let sepLen = 1;
     if (cut < POPUP_CHUNK_SIZE / 2) cut = remaining.lastIndexOf(' ', POPUP_CHUNK_SIZE);
-    if (cut < POPUP_CHUNK_SIZE / 2) cut = POPUP_CHUNK_SIZE;
-    chunks.push(remaining.slice(0, cut));
-    remaining = remaining.slice(cut).trimStart();
+    if (cut < POPUP_CHUNK_SIZE / 2) {
+      cut = POPUP_CHUNK_SIZE;
+      sepLen = 0;
+      // Don't split a surrogate pair: back off while the char before the cut
+      // is a high surrogate.
+      while (cut > 0 && /[\uD800-\uDBFF]/.test(remaining[cut - 1])) cut--;
+    }
+    chunks.push({ text: remaining.slice(0, cut), sep: remaining.slice(cut, cut + sepLen) });
+    remaining = remaining.slice(cut + sepLen);
   }
-  if (remaining) chunks.push(remaining);
+  if (remaining) chunks.push({ text: remaining, sep: '' });
   return chunks;
 }
 
 async function translatePopupText(text, targetLanguage, providerId, sourceLanguage = 'auto') {
   const chunks = chunkPopupText(validatePopupText(text));
-  const translated = [];
+  let result = '';
   for (const chunk of chunks) {
-    translated.push(
-      await translateSingleText(chunk, targetLanguage, providerId, sourceLanguage)
-    );
+    result +=
+      (await translateSingleText(chunk.text, targetLanguage, providerId, sourceLanguage)) +
+      chunk.sep;
   }
-  return translated.join('\n');
+  return result;
 }
 
 async function translateAllBlocks(blocks, targetLanguage, tabId) {
