@@ -236,7 +236,9 @@ async function speak(text, langCode, btn, stopBtn) {
   } catch (err) {
     showStatus(err.message, 'error');
   }
-  if (speakingBtn === btn && !speechPaused) stopSpeech();
+  // Remote playback awaits each chunk, so reaching here means it's done.
+  // Browser speechSynthesis only queues utterances — cleanup happens in onend.
+  if (engine !== 'browser' && speakingBtn === btn && !speechPaused) stopSpeech();
 }
 
 function showStatus(message, type = 'info') {
