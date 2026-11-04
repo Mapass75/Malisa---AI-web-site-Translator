@@ -87,6 +87,29 @@ export const PROVIDERS = {
     maxChars: 40000,
     batchSize: 100,
   },
+  grok: {
+    label: 'Grok (xAI)',
+    keyPlaceholder: 'xai-...',
+    defaultModel: 'grok-4-fast-non-reasoning',
+    baseUrl: 'https://api.x.ai/v1',
+    type: 'openai',
+    parallel: 14,
+    maxParallel: 14,
+    maxChars: 40000,
+    batchSize: 100,
+  },
+  free: {
+    label: 'Free translate (no key)',
+    defaultBaseUrl: 'https://translate.googleapis.com/translate_a/single',
+    type: 'libretranslate',
+    apiKeyOptional: true,
+    noApiKey: true,
+    noModel: true,
+    parallel: 2,
+    maxParallel: 4,
+    maxChars: 1500,
+    batchSize: 25,
+  },
   ollama: {
     label: 'Ollama (local)',
     keyPlaceholder: 'optional',
@@ -170,7 +193,8 @@ export const PROVIDER_LABELS = Object.fromEntries(
 
 export function isProviderReady(providerId, config) {
   const meta = PROVIDERS[providerId];
-  if (!meta || !config?.model) return false;
+  if (!meta || !config) return false;
+  if (!meta.noModel && !config.model) return false;
   if (meta.apiKeyOptional) return !!config.baseUrl;
   return !!config.apiKey;
 }

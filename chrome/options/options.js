@@ -1,3 +1,4 @@
+import browser from '../shared/browser.js';
 import { getSettings, saveSettings, hasPrivacyConsent, setPrivacyConsent } from '../shared/storage.js';
 import { LANGUAGES, PROVIDERS } from '../shared/types.js';
 import { getCachedModels } from '../shared/models.js';
@@ -76,7 +77,7 @@ function applyOptionsI18n() {
   document.getElementById('footerText').textContent = t('modelsFooter', lang);
   document.getElementById('footerPrivacyLink').textContent = t('privacyPolicy', lang);
   for (const id of Object.keys(PROVIDERS)) {
-    if (!providerEls[id]?.test) continue;
+    if (!providerEls[id]?.key) continue;
     updateToggleKeyLabels(id);
     providerEls[id].test.textContent = t('testConnection', lang);
     providerEls[id].clearKey.title = t('clearApiKey', lang);
@@ -124,16 +125,22 @@ function buildProviderSections() {
   providerSections.innerHTML = Object.entries(PROVIDERS)
     .map(([id, p]) => {
       const keyLabel = p.apiKeyOptional ? t('apiKeyOptional', lang) : t('apiKey', lang);
+      const baseUrlHint = id === 'free' ? t('freeProviderNote', lang) : t('ollamaUrlHint', lang);
       const baseUrlField = p.defaultBaseUrl
         ? `<div class="field">
             <label for="${id}BaseUrl">${t('serverUrl', lang)}</label>
             <input type="text" id="${id}BaseUrl" placeholder="${p.defaultBaseUrl}" />
-            <span class="hint">${t('ollamaUrlHint', lang)}</span>
+            <span class="hint">${baseUrlHint}</span>
           </div>`
         : '';
-      const statusHint = p.apiKeyOptional ? t('setUrlRefresh', lang) : t('setKeyRefresh', lang);
-      const modelField =
-        id === 'ollama'
+      const statusHint = p.noModel
+        ? t('freeProviderReady', lang)
+        : p.apiKeyOptional
+          ? t('setUrlRefresh', lang)
+          : t('setKeyRefresh', lang);
+      const modelField = p.noModel
+        ? `<span class="model-status" id="${id}Status">${statusHint}</span>`
+        : id === 'ollama'
           ? `<div class="field">
               <label for="${id}Model">${t('model', lang)}</label>
               <div class="model-row">
@@ -159,11 +166,9 @@ function buildProviderSections() {
               <span class="model-status" id="${id}Status">${statusHint}</span>
             </div>`;
 
-      return `
-    <section class="card" data-provider="${id}">
-      <h2>${p.label}</h2>
-      ${baseUrlField}
-      <div class="field">
+      const keyField = p.noApiKey
+        ? ''
+        : `<div class="field">
         <label for="${id}Key">${keyLabel}</label>
         <div class="key-row">
           <input type="password" id="${id}Key" class="key-input" placeholder="${p.keyPlaceholder}" autocomplete="off" />
@@ -172,7 +177,13 @@ function buildProviderSections() {
           <button type="button" class="btn secondary btn-compact" id="${id}Test">${t('testConnection', lang)}</button>
         </div>
         <span class="key-status" id="${id}KeyStatus"></span>
-      </div>
+      </div>`;
+
+      return `
+    <section class="card" data-provider="${id}">
+      <h2>${p.label}</h2>
+      ${baseUrlField}
+      ${keyField}
       ${modelField}
     </section>`;
     })
@@ -196,11 +207,11 @@ function buildProviderSections() {
       providerEls[id].baseUrl = document.getElementById(`${id}BaseUrl`);
       providerEls[id].baseUrl.addEventListener('change', () => refreshProviderModels(id, true));
     }
-    providerEls[id].refresh.addEventListener('click', () => refreshProviderModels(id, true));
-    providerEls[id].key.addEventListener('change', () => refreshProviderModels(id, true));
-    providerEls[id].toggleKey.addEventListener('click', () => toggleKeyVisibility(id));
-    providerEls[id].clearKey.addEventListener('click', () => clearApiKey(id));
-    providerEls[id].test.addEventListener('click', () => testProviderConnection(id));
+    providerEls[id].refresh?.addEventListener('click', () => refreshProviderModels(id, true));
+    providerEls[id].key?.addEventListener('change', () => refreshProviderModels(id, true));
+    providerEls[id].toggleKey?.addEventListener('click', () => toggleKeyVisibility(id));
+    providerEls[id].clearKey?.addEventListener('click', () => clearApiKey(id));
+    providerEls[id].test?.addEventListener('click', () => testProviderConnection(id));
   }
 }
 
@@ -328,8 +339,9 @@ function setThemeSegmentButtons(activeTheme) {
 }
 
 function getProviderConfig(providerId) {
-  const config = {    apiKey: sanitizeApiKey(providerEls[providerId].key.value),
-    model: sanitizeHeaderValue(providerEls[providerId].model.value),
+  const config = {
+    apiKey: sanitizeApiKey(providerEls[providerId].key?.value),
+    model: sanitizeHeaderValue(providerEls[providerId].model?.value),
   };
   if (providerEls[providerId].baseUrl) {
     config.baseUrl = providerEls[providerId].baseUrl.value.trim() || PROVIDERS[providerId].defaultBaseUrl;
@@ -338,17 +350,19 @@ function getProviderConfig(providerId) {
 }
 
 function canRefreshProvider(providerId) {
+  const meta = PROVIDERS[providerId];
+  if (meta.noModel) return false;
   const config = getProviderConfig(providerId);
-  if (PROVIDERS[providerId].apiKeyOptional) return !!config.baseUrl;
+  if (meta.apiKeyOptional) return !!config.baseUrl;
   return !!config.apiKey;
 }
 
 async function fetchModelsFromBg(provider, config, force = false) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
+    browser.runtime.sendMessage(
       { type: 'FETCH_MODELS', provider, config, force },
       (response) => {
-        if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+        if (browser.runtime.lastError) return reject(new Error(browser.runtime.lastError.message));
         if (!response?.ok) return reject(new Error(response.error));
         resolve(response.models);
       }
@@ -420,11 +434,12 @@ async function loadSettings() {
   setThemeSegmentButtons(settings.translatorTheme ?? 'system');
   await refreshCacheCount();
   for (const [id, config] of Object.entries(settings.providers)) {
-    if (!providerEls[id]) continue;    providerEls[id].key.value = config.apiKey ?? '';
+    if (!providerEls[id]) continue;
+    if (providerEls[id].key) providerEls[id].key.value = config.apiKey ?? '';
     if (providerEls[id].baseUrl) {
       providerEls[id].baseUrl.value = config.baseUrl ?? PROVIDERS[id].defaultBaseUrl ?? '';
     }
-    fillModelSelect(id, null, config.model);
+    if (!PROVIDERS[id].noModel) fillModelSelect(id, null, config.model);
   }
 
   await Promise.all(
@@ -440,12 +455,17 @@ async function loadSettings() {
   );
 }
 
-async function ensureOllamaHostPermission(baseUrl) {
+async function ensureHostPermission(baseUrl) {
   if (!baseUrl || /localhost|127\.0\.0\.1/.test(baseUrl)) return true;
   const origin = new URL(baseUrl).origin;
   const pattern = `${origin}/*`;
-  if (await chrome.permissions.contains({ origins: [pattern] })) return true;
-  return chrome.permissions.request({ origins: [pattern] });
+  if (await browser.permissions.contains({ origins: [pattern] })) return true;
+  try {
+    return await browser.permissions.request({ origins: [pattern] });
+  } catch {
+    // Firefox < 128 has no optional_host_permissions: treat as denied.
+    return false;
+  }
 }
 
 function collectSettings() {
@@ -483,11 +503,21 @@ async function saveAllSettings() {  const settings = collectSettings();
     if (!validateOllamaBaseUrl(ollama.baseUrl)) {
       throw new Error(t('invalidOllamaUrl', lang));
     }
-    if (!(await ensureOllamaHostPermission(ollama.baseUrl))) {
+    if (!(await ensureHostPermission(ollama.baseUrl))) {
       throw new Error(t('ollamaPermissionDenied', lang));
     }
   } else if (ollama?.baseUrl?.trim() && !validateOllamaBaseUrl(ollama.baseUrl)) {
     throw new Error(t('invalidOllamaUrl', lang));
+  }
+
+  const free = settings.providers.free;
+  if (free?.baseUrl?.trim() && !/translate\.googleapis\.com/.test(free.baseUrl)) {
+    if (!validateOllamaBaseUrl(free.baseUrl)) {
+      throw new Error(t('invalidFreeUrl', lang));
+    }
+    if (!(await ensureHostPermission(free.baseUrl))) {
+      throw new Error(t('freePermissionDenied', lang));
+    }
   }
 
   await saveSettings(settings);
@@ -549,7 +579,7 @@ uiLanguage.addEventListener('change', async () => {
 });
 
 function openPrivacyPolicy() {
-  chrome.tabs.create({ url: chrome.runtime.getURL('privacy/privacy.html') });
+  browser.tabs.create({ url: browser.runtime.getURL('privacy/privacy.html') });
 }
 
 document.getElementById('privacyPolicyLink')?.addEventListener('click', (e) => {

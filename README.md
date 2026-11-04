@@ -6,8 +6,10 @@ Translate any web page with **your own AI API keys**. Chrome and Firefox extensi
 
 ## Features
 
-- BYOK — OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, Mistral, OpenRouter, Ollama
+- BYOK — OpenAI, Anthropic, Google Gemini, DeepSeek, Groq, Grok (xAI), Mistral, OpenRouter, Ollama
+- **Free translate** — no API key needed (LibreTranslate-compatible endpoint, configurable URL)
 - Full-page translation + restore original
+- **Translate text** — Google-Translate-style box in the popup
 - **Selection translate** — right-click highlighted text → floating popup with translation
 - **Text-to-speech** in selection popup (browser or OpenAI TTS)
 - Fast parallel translation with deduplication and local cache (SHA-256 keys)
@@ -20,8 +22,9 @@ Translate any web page with **your own AI API keys**. Chrome and Firefox extensi
 
 | Folder | Purpose |
 |--------|---------|
-| `chrome/` | Chrome extension source — load unpacked in `chrome://extensions` |
-| `firefox/` | Firefox extension source — load temporary add-on or use XPI |
+| `chrome/` | Single extension source for both browsers — load unpacked in `chrome://extensions` |
+| `dist/chrome/` | Built Chrome extension (`npm run build`) |
+| `dist/firefox/` | Built Firefox extension (`npm run build`) — gecko manifest + bundled background |
 | `release/chrome/` | Chrome Web Store ZIP (`malisa-chrome-2.4.0.zip`) |
 | `release/firefox/` | Firefox AMO XPI (`malisa-firefox-2.4.0.xpi`) |
 
@@ -50,17 +53,26 @@ npm run icons   # optional — icons already in repo
 
 ### Firefox
 
+Firefox needs a build step (its MV3 background uses `background.scripts`, not a module worker):
+
 ```bash
-cd firefox
 npm install
-# about:debugging → This Firefox → Load Temporary Add-on → manifest.json
+npm run build:firefox     # → dist/firefox/ + release/firefox/*.xpi
+# about:debugging → This Firefox → Load Temporary Add-on → dist/firefox/manifest.json
+```
+
+Run / lint with web-ext:
+
+```bash
+npm run run:firefox       # web-ext run in a Firefox instance
+npm run lint:firefox      # web-ext lint dist/firefox
 ```
 
 ### Build release packages
 
 ```bash
-cd chrome && npm run package    # → ../malisa-chrome-webstore/release/*.zip
-cd firefox && npm run package    # → ../malisa-firefox-webstore/release/*.xpi
+npm run build:chrome      # → dist/chrome/ + release/chrome/*.zip
+npm run build:firefox     # → dist/firefox/ + release/firefox/*.xpi
 ```
 
 ## Privacy

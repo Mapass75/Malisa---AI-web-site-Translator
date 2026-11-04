@@ -1,22 +1,23 @@
+import browser from './browser.js';
 import { DEFAULT_SETTINGS, LANGUAGES } from './types.js';
 
 const STORAGE_KEY = 'settings';
 const CONSENT_KEY = 'privacy_consent_v1';
 
 async function migrateFromSyncIfNeeded() {
-  const local = await chrome.storage.local.get(STORAGE_KEY);
+  const local = await browser.storage.local.get(STORAGE_KEY);
   if (local[STORAGE_KEY]) return;
 
-  const sync = await chrome.storage.sync.get(STORAGE_KEY);
+  const sync = await browser.storage.sync.get(STORAGE_KEY);
   if (!sync[STORAGE_KEY]) return;
 
-  await chrome.storage.local.set({ [STORAGE_KEY]: sync[STORAGE_KEY] });
-  await chrome.storage.sync.remove(STORAGE_KEY);
+  await browser.storage.local.set({ [STORAGE_KEY]: sync[STORAGE_KEY] });
+  await browser.storage.sync.remove(STORAGE_KEY);
 }
 
 export async function getSettings() {
   await migrateFromSyncIfNeeded();
-  const result = await chrome.storage.local.get(STORAGE_KEY);
+  const result = await browser.storage.local.get(STORAGE_KEY);
   const stored = result[STORAGE_KEY];
   if (!stored) return structuredClone(DEFAULT_SETTINGS);
 
@@ -43,16 +44,16 @@ export async function getSettings() {
 }
 
 export async function saveSettings(settings) {
-  await chrome.storage.local.set({ [STORAGE_KEY]: settings });
+  await browser.storage.local.set({ [STORAGE_KEY]: settings });
 }
 
 export async function hasPrivacyConsent() {
-  const result = await chrome.storage.local.get(CONSENT_KEY);
+  const result = await browser.storage.local.get(CONSENT_KEY);
   return result[CONSENT_KEY] === true;
 }
 
 export async function setPrivacyConsent(accepted) {
-  await chrome.storage.local.set({ [CONSENT_KEY]: !!accepted });
+  await browser.storage.local.set({ [CONSENT_KEY]: !!accepted });
 }
 
 export function getLanguageName(code) {

@@ -1,3 +1,4 @@
+import browser from './browser.js';
 export const UI_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'hr', name: 'Hrvatski' },
@@ -109,6 +110,17 @@ const MESSAGES = {
     selectionTtsModel: 'OpenAI TTS model',
     selectionTtsHint:
       'Speak buttons read the original and translated text. OpenAI TTS uses your OpenAI API key and is billed separately from translation.',
+    translateTextTitle: 'Translate text',
+    translateTextPlaceholder: 'Enter text to translate...',
+    translateText: 'Translate',
+    copyText: 'Copy',
+    copiedText: 'Copied ✓',
+    copyFailed: 'Copy failed',
+    setProviderUrl: 'Set the server URL in Settings',
+    freeProviderNote: 'Free, no API key. Default: public Google Translate endpoint (rate-limited). You can also point to any self-hosted LibreTranslate /translate URL.',
+    freeProviderReady: 'No API key needed — select it in the popup and translate',
+    invalidFreeUrl: 'Invalid free translate URL',
+    freePermissionDenied: 'Permission for the free translate server was denied',
   },
 };
 
@@ -213,6 +225,17 @@ MESSAGES.hr = L({
   selectionTtsModel: 'OpenAI TTS model',
   selectionTtsHint:
     'Gumbi čitaju original i prijevod. OpenAI TTS koristi OpenAI API ključ i naplaćuje se odvojeno od prijevoda.',
+  translateTextTitle: 'Prevedi tekst',
+  translateTextPlaceholder: 'Unesi tekst za prijevod...',
+  translateText: 'Prevedi',
+  copyText: 'Kopiraj',
+  copiedText: 'Kopirano ✓',
+  copyFailed: 'Kopiranje nije uspjelo',
+  setProviderUrl: 'Postavi URL poslužitelja u Postavkama',
+  freeProviderNote: 'Besplatno, bez API ključa. LibreTranslate-kompatibilan endpoint — javni poslužitelji imaju ograničenja; možeš postaviti vlastiti.',
+  freeProviderReady: 'API ključ nije potreban — odaberi u popupu i prevedi',
+  invalidFreeUrl: 'Nevažeći URL za besplatni prijevod',
+  freePermissionDenied: 'Dopuštenje za poslužitelj besplatnog prijevoda je odbijeno',
 });
 
 MESSAGES.sr = L({
@@ -312,6 +335,17 @@ MESSAGES.sr = L({
   selectionTtsModel: 'OpenAI TTS model',
   selectionTtsHint:
     'Dugmad čitaju original i prevod. OpenAI TTS koristi OpenAI API ključ i naplaćuje se odvojeno od prevoda.',
+  translateTextTitle: 'Prevedi tekst',
+  translateTextPlaceholder: 'Unesi tekst za prevod...',
+  translateText: 'Prevedi',
+  copyText: 'Kopiraj',
+  copiedText: 'Kopirano ✓',
+  copyFailed: 'Kopiranje nije uspelo',
+  setProviderUrl: 'Podesi URL servera u Podešavanjima',
+  freeProviderNote: 'Besplatno, bez API ključa. LibreTranslate-kompatibilan endpoint — javni serveri imaju ograničenja; možeš podesiti svoj.',
+  freeProviderReady: 'API ključ nije potreban — izaberi u popupu i prevedi',
+  invalidFreeUrl: 'Nevažeći URL za besplatni prevod',
+  freePermissionDenied: 'Dozvola za server besplatnog prevoda je odbijena',
 });
 
 MESSAGES.de = L({
@@ -411,6 +445,17 @@ MESSAGES.de = L({
   selectionTtsModel: 'OpenAI TTS-Modell',
   selectionTtsHint:
     'Buttons lesen Original und Übersetzung vor. OpenAI TTS nutzt Ihren OpenAI API-Schlüssel und wird separat abgerechnet.',
+  translateTextTitle: 'Text übersetzen',
+  translateTextPlaceholder: 'Text zum Übersetzen eingeben...',
+  translateText: 'Übersetzen',
+  copyText: 'Kopieren',
+  copiedText: 'Kopiert ✓',
+  copyFailed: 'Kopieren fehlgeschlagen',
+  setProviderUrl: 'Server-URL in den Einstellungen festlegen',
+  freeProviderNote: 'Kostenlos, kein API-Schlüssel. LibreTranslate-kompatibler Endpoint — öffentliche Instanzen sind limitiert; ein eigener Server kann eingetragen werden.',
+  freeProviderReady: 'Kein API-Schlüssel nötig — im Popup auswählen und übersetzen',
+  invalidFreeUrl: 'Ungültige Free-Translate-URL',
+  freePermissionDenied: 'Berechtigung für den Free-Translate-Server wurde verweigert',
 });
 
 MESSAGES.it = L({
@@ -510,6 +555,17 @@ MESSAGES.it = L({
   selectionTtsModel: 'Modello OpenAI TTS',
   selectionTtsHint:
     'I pulsanti leggono originale e traduzione. OpenAI TTS usa la chiave OpenAI ed è fatturato separatamente.',
+  translateTextTitle: 'Traduci testo',
+  translateTextPlaceholder: 'Inserisci il testo da tradurre...',
+  translateText: 'Traduci',
+  copyText: 'Copia',
+  copiedText: 'Copiato ✓',
+  copyFailed: 'Copia non riuscita',
+  setProviderUrl: "Imposta l'URL del server nelle Impostazioni",
+  freeProviderNote: 'Gratuito, senza chiave API. Endpoint compatibile LibreTranslate — le istanze pubbliche hanno limiti; puoi usare un tuo server.',
+  freeProviderReady: 'Nessuna chiave API necessaria — selezionalo nel popup e traduci',
+  invalidFreeUrl: 'URL di traduzione gratuita non valido',
+  freePermissionDenied: 'Permesso per il server di traduzione gratuito negato',
 });
 
 MESSAGES.fr = L({
@@ -609,6 +665,17 @@ MESSAGES.fr = L({
   selectionTtsModel: 'Modèle OpenAI TTS',
   selectionTtsHint:
     'Les boutons lisent l’original et la traduction. OpenAI TTS utilise votre clé OpenAI et est facturé séparément.',
+  translateTextTitle: 'Traduire du texte',
+  translateTextPlaceholder: 'Saisissez le texte à traduire...',
+  translateText: 'Traduire',
+  copyText: 'Copier',
+  copiedText: 'Copié ✓',
+  copyFailed: 'Échec de la copie',
+  setProviderUrl: "Définir l'URL du serveur dans les Paramètres",
+  freeProviderNote: 'Gratuit, sans clé API. Endpoint compatible LibreTranslate — les instances publiques sont limitées ; vous pouvez utiliser votre propre serveur.',
+  freeProviderReady: "Pas de clé API requise — sélectionnez-le dans le popup et traduisez",
+  invalidFreeUrl: 'URL de traduction gratuite invalide',
+  freePermissionDenied: 'Permission refusée pour le serveur de traduction gratuit',
 });
 
 MESSAGES.es = L({
@@ -708,6 +775,17 @@ MESSAGES.es = L({
   selectionTtsModel: 'Modelo OpenAI TTS',
   selectionTtsHint:
     'Los botones leen el original y la traducción. OpenAI TTS usa tu clave OpenAI y se factura aparte.',
+  translateTextTitle: 'Traducir texto',
+  translateTextPlaceholder: 'Escribe el texto a traducir...',
+  translateText: 'Traducir',
+  copyText: 'Copiar',
+  copiedText: 'Copiado ✓',
+  copyFailed: 'Error al copiar',
+  setProviderUrl: 'Configura la URL del servidor en Ajustes',
+  freeProviderNote: 'Gratis, sin clave API. Endpoint compatible con LibreTranslate — las instancias públicas tienen límites; puedes usar tu propio servidor.',
+  freeProviderReady: 'No hace falta clave API — selecciónalo en el popup y traduce',
+  invalidFreeUrl: 'URL de traducción gratuita no válida',
+  freePermissionDenied: 'Permiso denegado para el servidor de traducción gratuita',
 });
 
 export function t(key, lang = 'en', vars = {}) {
@@ -720,7 +798,7 @@ export function t(key, lang = 'en', vars = {}) {
 }
 
 export async function getUiLanguage() {
-  const result = await chrome.storage.local.get('settings');
+  const result = await browser.storage.local.get('settings');
   const lang = result.settings?.uiLanguage;
   return UI_LANGUAGES.some((l) => l.code === lang) ? lang : 'en';
 }

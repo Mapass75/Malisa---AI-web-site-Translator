@@ -5,11 +5,9 @@
   "type": "module",
   "description": "Malisa - AI web site Translator (Google Chrome)",
   "scripts": {
-    "icons": "node scripts/generate-icons.mjs",
-    "package": "node scripts/package.mjs"
+    "icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
-    "archiver": "^7.0.1",
     "sharp": "^0.35.1"
   }
 }

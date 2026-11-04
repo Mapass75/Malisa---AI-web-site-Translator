@@ -1,3 +1,4 @@
+import browser from '../shared/browser.js';
 import { getSettings, saveSettings } from '../shared/storage.js';
 import { LANGUAGES, PROVIDER_LABELS, PROVIDERS, isProviderReady } from '../shared/types.js';
 import { escapeHtml } from '../shared/security.js';
@@ -12,6 +13,10 @@ const restoreBtn = document.getElementById('restoreBtn');
 const statusEl = document.getElementById('status');
 const optionsLink = document.getElementById('optionsLink');
 const themeButtons = document.querySelectorAll('.theme-btn');
+const textInput = document.getElementById('textInput');
+const textOutput = document.getElementById('textOutput');
+const translateTextBtn = document.getElementById('translateTextBtn');
+const copyTextBtn = document.getElementById('copyTextBtn');
 
 let uiLang = 'en';
 let unwatchSystem = () => {};
@@ -28,6 +33,10 @@ function applyPopupI18n() {
   document.getElementById('themeDark').textContent = t('themeDark', uiLang);
   document.getElementById('themeSystem').textContent = t('themeSystem', uiLang);
   document.getElementById('themeToggle').setAttribute('aria-label', t('translatorTheme', uiLang));
+  document.getElementById('textTranslateTitle').textContent = t('translateTextTitle', uiLang);
+  textInput.placeholder = t('translateTextPlaceholder', uiLang);
+  translateTextBtn.textContent = t('translateText', uiLang);
+  copyTextBtn.textContent = t('copyText', uiLang);
 }
 
 function setThemeButtons(activeTheme) {
@@ -89,7 +98,7 @@ async function init() {
 
   optionsLink.addEventListener('click', (e) => {
     e.preventDefault();
-    chrome.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage();
   });
 
   providerSelect.addEventListener('change', async () => {
@@ -114,7 +123,7 @@ async function init() {
       const provider = providerSelect.value;
       if (!isProviderReady(provider, settings.providers[provider])) {
         const hint = PROVIDERS[provider]?.apiKeyOptional
-          ? t('setOllama', uiLang)
+          ? t('setProviderUrl', uiLang)
           : t('enterApiKey', uiLang, { provider: PROVIDER_LABELS[provider] });
         showStatus(hint, 'error');
         return;
@@ -138,6 +147,52 @@ async function init() {
       window.close();
     } catch (err) {
       showStatus(err.message, 'error');
+    }
+  });
+
+  translateTextBtn.addEventListener('click', async () => {
+    const text = textInput.value.trim();
+    if (!text) return;
+    const provider = providerSelect.value;
+    const settings = await getSettings();
+    if (!isProviderReady(provider, settings.providers[provider])) {
+      const hint = PROVIDERS[provider]?.apiKeyOptional
+        ? t('setProviderUrl', uiLang)
+        : t('enterApiKey', uiLang, { provider: PROVIDER_LABELS[provider] });
+      showStatus(hint, 'error');
+      return;
+    }
+
+    translateTextBtn.disabled = true;
+    textOutput.textContent = t('translating', uiLang);
+    try {
+      const response = await browser.runtime.sendMessage({
+        type: 'TRANSLATE_TEXT',
+        text,
+        targetLanguage: languageSelect.value,
+        provider,
+      });
+      if (!response?.ok) throw new Error(response?.error ?? 'Translation failed');
+      textOutput.textContent = response.translated;
+      copyTextBtn.disabled = false;
+      copyTextBtn.textContent = t('copyText', uiLang);
+    } catch (err) {
+      textOutput.textContent = '';
+      showStatus(err.message, 'error');
+    } finally {
+      translateTextBtn.disabled = false;
+    }
+  });
+
+  copyTextBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(textOutput.textContent);
+      copyTextBtn.textContent = t('copiedText', uiLang);
+      setTimeout(() => {
+        copyTextBtn.textContent = t('copyText', uiLang);
+      }, 1500);
+    } catch {
+      showStatus(t('copyFailed', uiLang), 'error');
     }
   });
 }

@@ -1,3 +1,4 @@
+import browser from './browser.js';
 import { LANGUAGES, PROVIDERS } from './types.js';
 
 const LANGUAGE_CODES = new Set(LANGUAGES.map((l) => l.code));
@@ -58,7 +59,7 @@ export function validateBlocks(blocks) {
 
 export function assertTrustedSender(sender) {
   if (!sender) throw new Error('Unauthorized message source');
-  if (sender.id && sender.id !== chrome.runtime.id) {
+  if (sender.id && sender.id !== browser.runtime.id) {
     throw new Error('Unauthorized message source');
   }
 }
@@ -81,6 +82,7 @@ export function sanitizeErrorMessage(message) {
     .replace(/sk-[A-Za-z0-9_-]+/g, '[API_KEY]')
     .replace(/sk-ant-[A-Za-z0-9_-]+/g, '[API_KEY]')
     .replace(/gsk_[A-Za-z0-9_-]+/g, '[API_KEY]')
+    .replace(/xai-[A-Za-z0-9_-]+/g, '[API_KEY]')
     .replace(/AIza[A-Za-z0-9_-]+/g, '[API_KEY]')
     .slice(0, 300);
 }

@@ -1,3 +1,4 @@
+import browser from '../shared/browser.js';
 import { getSettings } from '../shared/storage.js';
 import { getCachedTranslations, cacheTranslations } from '../shared/cache.js';
 import { dedupeBlocks } from '../shared/dedupe.js';
@@ -32,7 +33,7 @@ async function getCachedSettings() {
   return settingsCache;
 }
 
-chrome.storage.onChanged.addListener((changes, area) => {
+browser.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.settings) {
     settingsCache = null;
     if (changes.settings.newValue?.uiLanguage !== changes.settings.oldValue?.uiLanguage) {
@@ -43,35 +44,35 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 async function setupContextMenu() {
   const lang = await getUiLanguage();
-  await chrome.contextMenus.removeAll();
-  chrome.contextMenus.create({
+  await browser.contextMenus.removeAll();
+  browser.contextMenus.create({
     id: CONTEXT_MENU_ID,
     title: t('contextMenuTranslate', lang),
     contexts: ['selection'],
   });
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener(() => {
   setupContextMenu().catch(() => {});
   getCachedSettings();
 });
 
-chrome.runtime.onStartup.addListener(() => {
+browser.runtime.onStartup.addListener(() => {
   setupContextMenu().catch(() => {});
   getCachedSettings();
 });
 function notifyTab(tabId, message) {
   if (!tabId) return;
-  chrome.tabs.sendMessage(tabId, message).catch(() => {});
+  browser.tabs.sendMessage(tabId, message).catch(() => {});
 }
 
 async function notifyTabEnsured(tabId, message) {
   if (!tabId) return;
   try {
-    await chrome.tabs.sendMessage(tabId, message);
+    await browser.tabs.sendMessage(tabId, message);
   } catch {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ['content/content.js'] });
-    await chrome.tabs.sendMessage(tabId, message);
+    await browser.scripting.executeScript({ target: { tabId }, files: ['content/content.js'] });
+    await browser.tabs.sendMessage(tabId, message);
   }
 }
 function createProgressThrottle(tabId) {
@@ -91,10 +92,23 @@ function sortBatchesLargestFirst(batches) {
     .map((item) => item.batch);
 }
 
-async function translateBatchWithRetry(provider, translateOpts, batch) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function isTransientError(message) {
+  return /429|rate.?limit|too many|timeout|timed out|network|failed to fetch|500|502|503|504|overload/i.test(
+    message
+  );
+}
+
+async function translateBatchWithRetry(provider, translateOpts, batch, retried = false) {
   try {
     return await translate(provider, { ...translateOpts, blocks: batch });
   } catch (err) {
+    // One backoff retry for transient failures (rate limits, 5xx, network).
+    if (!retried && isTransientError(err.message)) {
+      await sleep(2000);
+      return translateBatchWithRetry(provider, translateOpts, batch, true);
+    }
     const retryable =
       batch.length >= 4 &&
       /did not translate|format mismatch|not valid JSON|No text was translated/i.test(err.message);
@@ -107,6 +121,44 @@ async function translateBatchWithRetry(provider, translateOpts, batch) {
   }
 }
 
+async function resolveProvider(settings, provider = settings.activeProvider) {
+  if (!isValidProvider(provider)) {
+    throw new Error('Invalid AI provider');
+  }
+  const providerConfig = settings.providers[provider];
+  if (!isProviderReady(provider, providerConfig)) {
+    throw new Error(`Provider ${provider} is not configured. Open Settings.`);
+  }
+  if (provider === 'ollama' && !validateOllamaBaseUrl(providerConfig.baseUrl)) {
+    throw new Error('Invalid Ollama URL');
+  }
+  return {
+    provider,
+    translateOpts: {
+      apiKey: providerConfig.apiKey,
+      model: providerConfig.model,
+      baseUrl: providerConfig.baseUrl,
+    },
+    cacheEnabled: settings.translationCacheEnabled !== false,
+  };
+}
+
+async function translateSingleText(text, targetLanguage, providerId) {
+  const settings = await getCachedSettings();
+  const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings, providerId);
+  const cached = await getCachedTranslations([text], targetLanguage, cacheEnabled);
+  if (cached.has(text)) return cached.get(text);
+
+  const results = await translateBatchWithRetry(provider, { ...translateOpts, targetLanguage }, [
+    { id: '0', text },
+  ]);
+  const translated = results[0]?.translated ?? text;
+  cacheTranslations([{ text, translation: translated }], targetLanguage, cacheEnabled).catch(
+    () => {}
+  );
+  return translated;
+}
+
 async function translateAllBlocks(blocks, targetLanguage, tabId) {
   if (!isValidLanguage(targetLanguage)) {
     throw new Error('Invalid target language');
@@ -114,24 +166,10 @@ async function translateAllBlocks(blocks, targetLanguage, tabId) {
 
   const safeBlocks = validateBlocks(blocks);
   const settings = await getCachedSettings();
-  const provider = settings.activeProvider;
-
-  if (!isValidProvider(provider)) {
-    throw new Error('Invalid AI provider');
-  }
-
-  const providerConfig = settings.providers[provider];
-  if (!isProviderReady(provider, providerConfig)) {
-    throw new Error(`Provider ${provider} is not configured. Open Settings.`);
-  }
-
-  if (provider === 'ollama' && !validateOllamaBaseUrl(providerConfig.baseUrl)) {
-    throw new Error('Invalid Ollama URL');
-  }
+  const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings);
 
   const limits = getProviderLimits(provider, settings);
   const texts = safeBlocks.map((b) => b.text);
-  const cacheEnabled = settings.translationCacheEnabled !== false;
   const cached = await getCachedTranslations(texts, targetLanguage, cacheEnabled);
 
   const cachedResults = [];
@@ -155,12 +193,7 @@ async function translateAllBlocks(blocks, targetLanguage, tabId) {
   );
   const onProgress = batches.length > 2 ? createProgressThrottle(tabId) : () => {};
 
-  const translateOpts = {
-    targetLanguage,
-    apiKey: providerConfig.apiKey,
-    model: providerConfig.model,
-    baseUrl: providerConfig.baseUrl,
-  };
+  translateOpts.targetLanguage = targetLanguage;
 
   await runConcurrent(
     batches,
@@ -181,47 +214,12 @@ async function translateSelection(text, tabId) {
   const trimmed = validateSelectionText(text);
   const settings = await getCachedSettings();
   const targetLanguage = settings.defaultLanguage;
-  const provider = settings.activeProvider;
 
   if (!isValidLanguage(targetLanguage)) {
     throw new Error('Invalid target language');
   }
-  if (!isValidProvider(provider)) {
-    throw new Error('Invalid AI provider');
-  }
 
-  const providerConfig = settings.providers[provider];
-  if (!isProviderReady(provider, providerConfig)) {
-    throw new Error(`Provider ${provider} is not configured. Open Settings.`);
-  }
-  if (provider === 'ollama' && !validateOllamaBaseUrl(providerConfig.baseUrl)) {
-    throw new Error('Invalid Ollama URL');
-  }
-
-  const cacheEnabled = settings.translationCacheEnabled !== false;
-  const cached = await getCachedTranslations([trimmed], targetLanguage, cacheEnabled);
-  if (cached.has(trimmed)) {
-    await notifyTabEnsured(tabId, {
-      type: 'SELECTION_TRANSLATED',
-      original: trimmed,
-      translated: cached.get(trimmed),
-      targetLanguage,
-    });
-    return;
-  }
-
-  const translateOpts = {
-    targetLanguage,
-    apiKey: providerConfig.apiKey,
-    model: providerConfig.model,
-    baseUrl: providerConfig.baseUrl,
-  };
-  const results = await translateBatchWithRetry(provider, translateOpts, [{ id: '0', text: trimmed }]);
-  const translated = results[0]?.translated ?? trimmed;
-
-  cacheTranslations([{ text: trimmed, translation: translated }], targetLanguage, cacheEnabled).catch(
-    () => {}
-  );
+  const translated = await translateSingleText(trimmed, targetLanguage);
 
   await notifyTabEnsured(tabId, {
     type: 'SELECTION_TRANSLATED',
@@ -231,7 +229,7 @@ async function translateSelection(text, tabId) {
   });
 }
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+browser.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== CONTEXT_MENU_ID || !tab?.id) return;
   const text = info.selectionText?.trim();
   if (!text) return;
@@ -245,7 +243,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   });
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {  try {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try {
     assertTrustedSender(sender);
   } catch (err) {
     sendResponse({ ok: false, error: err.message });
@@ -266,6 +264,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {  try {
       );
     sendResponse({ ok: true });
     return false;
+  }
+
+  if (message.type === 'TRANSLATE_TEXT') {
+    try {
+      const text = validateSelectionText(message.text);
+      if (!isValidLanguage(message.targetLanguage)) {
+        throw new Error('Invalid target language');
+      }
+      translateSingleText(text, message.targetLanguage, message.provider)
+        .then((translated) => sendResponse({ ok: true, translated }))
+        .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
+    } catch (err) {
+      sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) });
+    }
+    return true;
   }
 
   if (message.type === 'FETCH_MODELS') {

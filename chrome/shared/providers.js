@@ -110,6 +110,74 @@ function estimateMaxTokens(blocks) {
   return Math.min(16384, Math.max(1024, Math.ceil(chars * 1.6) + 256));
 }
 
+const FREE_DEFAULT_URL = 'https://translate.googleapis.com/translate_a/single';
+
+// Free no-key translation. Default endpoint is Google's public `gtx` API;
+// any LibreTranslate-compatible /translate URL can be configured instead.
+async function translateWithFree(opts) {
+  const baseUrl = (opts.baseUrl || FREE_DEFAULT_URL).replace(/\/$/, '');
+  if (/translate_a\/single|translate\.googleapis/.test(baseUrl)) {
+    return translateWithGtx(baseUrl, opts);
+  }
+  return translateWithLibreTranslate(baseUrl, opts);
+}
+
+async function gtxOne(baseUrl, text, targetLanguage) {
+  const url =
+    `${baseUrl}?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}` +
+    `&dt=t&q=${encodeURIComponent(text)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Free translate ${response.status}`);
+  const data = await response.json();
+  const segments = data?.[0];
+  if (!Array.isArray(segments)) throw new Error('Free translate: unexpected response');
+  return segments.map((s) => s?.[0] ?? '').join('').trim();
+}
+
+async function translateWithGtx(baseUrl, opts) {
+  const joined = opts.blocks.map((b) => b.text.replace(/\n/g, ' ')).join('\n');
+  const translated = await gtxOne(baseUrl, joined, opts.targetLanguage);
+  const parts = translated.split('\n');
+
+  if (parts.length === opts.blocks.length) {
+    return opts.blocks.map((block, i) => ({
+      id: block.id,
+      translated: parts[i].trim() || block.text,
+    }));
+  }
+
+  // Line counts mismatched — fall back to one request per block.
+  const results = [];
+  for (const block of opts.blocks) {
+    try {
+      results.push({ id: block.id, translated: (await gtxOne(baseUrl, block.text, opts.targetLanguage)) || block.text });
+    } catch {
+      results.push({ id: block.id, translated: block.text });
+    }
+  }
+  return results;
+}
+
+async function translateWithLibreTranslate(baseUrl, opts) {
+  const response = await fetch(`${baseUrl}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: opts.blocks.map((b) => b.text),
+      source: 'auto',
+      target: opts.targetLanguage,
+      format: 'text',
+    }),
+  });
+  if (!response.ok) throw new Error(`Free translate ${response.status}: ${await response.text()}`);
+  const data = await response.json();
+  const translated = Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
+  return opts.blocks.map((block, i) => ({
+    id: block.id,
+    translated: (translated[i] ?? block.text).trim() || block.text,
+  }));
+}
+
 async function translateWithOllama(opts) {
   const baseUrl = ollamaOpenAiBase(opts.baseUrl || 'http://localhost:11434/v1');
   const headers = {
@@ -227,6 +295,7 @@ export async function translate(provider, opts) {
   if (config.type === 'anthropic') return translateWithAnthropic(opts);
   if (config.type === 'google') return translateWithGoogle(opts);
   if (config.type === 'ollama') return translateWithOllama(opts);
+  if (config.type === 'libretranslate') return translateWithFree(opts);
 
   const extraHeaders =
     provider === 'openrouter'

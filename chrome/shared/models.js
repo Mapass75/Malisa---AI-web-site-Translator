@@ -1,3 +1,4 @@
+import browser from './browser.js';
 import { PROVIDERS } from './types.js';
 import { buildAuthHeaders, sanitizeApiKey, sanitizeHeaderValue } from './security.js';
 const CACHE_KEY = 'model_lists_cache';
@@ -183,18 +184,19 @@ const FETCHERS = {
   groq: (c) => fetchOpenAICompatible('https://api.groq.com/openai/v1', c.apiKey, genericFilter),
   mistral: (c) => fetchOpenAICompatible('https://api.mistral.ai/v1', c.apiKey, genericFilter),
   openrouter: (c) => fetchOpenRouter(c.apiKey),
+  grok: (c) => fetchOpenAICompatible('https://api.x.ai/v1', c.apiKey, genericFilter),
   ollama: fetchOllama,
 };
 
 function canFetchModels(provider, config) {
   const meta = PROVIDERS[provider];
-  if (!meta) return false;
+  if (!meta || meta.noModel || !FETCHERS[provider]) return false;
   if (meta.apiKeyOptional) return !!config.baseUrl;
   return !!config.apiKey;
 }
 
 export async function getCachedModels(provider) {
-  const cache = await chrome.storage.local.get(CACHE_KEY);
+  const cache = await browser.storage.local.get(CACHE_KEY);
   const entry = cache[CACHE_KEY]?.[provider];
   if (!entry) return null;
   if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) return null;
@@ -221,9 +223,9 @@ export async function fetchModels(provider, config, force = false) {
   }
   if (!models.length) return [];
 
-  const cache = (await chrome.storage.local.get(CACHE_KEY))[CACHE_KEY] ?? {};
+  const cache = (await browser.storage.local.get(CACHE_KEY))[CACHE_KEY] ?? {};
   cache[provider] = { models, fetchedAt: Date.now() };
-  await chrome.storage.local.set({ [CACHE_KEY]: cache });
+  await browser.storage.local.set({ [CACHE_KEY]: cache });
 
   return models;
 }
