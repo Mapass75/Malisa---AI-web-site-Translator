@@ -45,6 +45,8 @@ const speechGoogleVoice = document.getElementById('speechGoogleVoice');
 const speechGeminiModel = document.getElementById('speechGeminiModel');
 const speechElevenlabsKey = document.getElementById('speechElevenlabsKey');
 const speechElevenlabsVoiceId = document.getElementById('speechElevenlabsVoiceId');
+const speechOpenaiVoice = document.getElementById('speechOpenaiVoice');
+const speechOpenaiModel = document.getElementById('speechOpenaiModel');
 const speechTestBtn = document.getElementById('speechTestBtn');
 const speechTestStatus = document.getElementById('speechTestStatus');
 const providerSections = document.getElementById('providerSections');
@@ -92,6 +94,9 @@ function applyOptionsI18n() {
   document.getElementById('labelSpeechGeminiModel').textContent = t('speechGeminiModel', lang);
   document.getElementById('speechGeminiHint').textContent = t('speechGeminiHint', lang);
   document.getElementById('labelSpeechElevenlabsKey').textContent = t('speechElevenlabsKey', lang);
+  document.getElementById('labelSpeechOpenaiVoice').textContent = t('speechOpenaiVoice', lang);
+  document.getElementById('labelSpeechOpenaiModel').textContent = t('speechOpenaiModel', lang);
+  document.getElementById('speechOpenaiHint').textContent = t('speechOpenaiHint', lang);
   document.getElementById('labelSpeechElevenlabsVoice').textContent = t('speechElevenlabsVoice', lang);
   document.getElementById('labelSpeechRate').textContent = t('speechRate', lang);
   document.getElementById('labelSpeechPitch').textContent = t('speechPitch', lang);
@@ -182,6 +187,7 @@ function updateSpeechFields() {
   document.getElementById('speechGoogleFields').hidden = engine !== 'google';
   document.getElementById('speechGeminiFields').hidden = engine !== 'gemini';
   document.getElementById('speechElevenlabsFields').hidden = engine !== 'elevenlabs';
+  document.getElementById('speechOpenaiFields').hidden = engine !== 'openai';
   const meta = SPEECH_ENGINES[engine];
   speechEngineInfo.textContent = `${meta.freeInfo} ${t('freeTierChecked', lang, { d: FREE_TIER_CHECKED })}`;
   if (meta.keyUrl) {
@@ -203,6 +209,8 @@ function collectSpeech() {
     geminiModel: speechGeminiModel.value.trim() || 'gemini-2.5-flash-preview-tts',
     elevenlabsKey: sanitizeApiKey(speechElevenlabsKey.value),
     elevenlabsVoiceId: speechElevenlabsVoiceId.value.trim(),
+    openaiVoice: OPENAI_TTS_VOICES.includes(speechOpenaiVoice.value) ? speechOpenaiVoice.value : 'nova',
+    openaiModel: OPENAI_TTS_MODELS.includes(speechOpenaiModel.value) ? speechOpenaiModel.value : 'tts-1',
   };
 }
 
@@ -227,7 +235,10 @@ async function testSpeech() {
           cfg.engine,
           chunk,
           cfg,
-          s.providers?.google?.apiKey
+          {
+            geminiKey: s.providers?.google?.apiKey,
+            openaiKey: s.providers?.openai?.apiKey,
+          }
         );
         const audio = new Audio(`data:${mimeType};base64,${audioBase64}`);
         audio.playbackRate = cfg.rate;
@@ -620,6 +631,10 @@ async function loadSettings() {
   speechGeminiModel.value = speech.geminiModel ?? 'gemini-2.5-flash-preview-tts';
   speechElevenlabsKey.value = speech.elevenlabsKey ?? '';
   speechElevenlabsVoiceId.value = speech.elevenlabsVoiceId ?? '';
+  speechOpenaiVoice.innerHTML = OPENAI_TTS_VOICES.map((v) => `<option value="${v}">${v}</option>`).join('');
+  speechOpenaiModel.innerHTML = OPENAI_TTS_MODELS.map((m) => `<option value="${m}">${m}</option>`).join('');
+  speechOpenaiVoice.value = OPENAI_TTS_VOICES.includes(speech.openaiVoice) ? speech.openaiVoice : 'nova';
+  speechOpenaiModel.value = OPENAI_TTS_MODELS.includes(speech.openaiModel) ? speech.openaiModel : 'tts-1';
   speechRate.value = String(speech.rate ?? 1);
   speechPitch.value = String(speech.pitch ?? 1);
   populateSpeechVoices(speech.voice ?? '');

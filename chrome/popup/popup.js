@@ -170,13 +170,13 @@ async function speakWithBrowser(text, langCode, btn, stopBtn, cfg) {
   }
 }
 
-async function speakRemote(text, engine, btn, stopBtn, cfg, geminiKey) {
-  const voiceKey = `${engine}|${cfg.googleVoice}|${cfg.geminiModel}|${cfg.elevenlabsVoiceId}`;
+async function speakRemote(text, engine, btn, stopBtn, cfg, keys) {
+  const voiceKey = `${engine}|${cfg.googleVoice}|${cfg.geminiModel}|${cfg.elevenlabsVoiceId}|${cfg.openaiVoice}|${cfg.openaiModel}`;
   for (const chunk of splitForSpeech(text)) {
     if (speechStopped) return;
     const cacheKey = `${voiceKey}|${chunk}`;
     if (!audioCache.has(cacheKey)) {
-      audioCache.set(cacheKey, await fetchSpeech(engine, chunk, cfg, geminiKey));
+      audioCache.set(cacheKey, await fetchSpeech(engine, chunk, cfg, keys));
     }
     const { audioBase64, mimeType } = audioCache.get(cacheKey);
     if (speechStopped) return;
@@ -231,7 +231,10 @@ async function speak(text, langCode, btn, stopBtn) {
     if (engine === 'browser') {
       await speakWithBrowser(text, langCode, btn, stopBtn, cfg);
     } else {
-      await speakRemote(text, engine, btn, stopBtn, cfg, settings.providers?.google?.apiKey);
+      await speakRemote(text, engine, btn, stopBtn, cfg, {
+        geminiKey: settings.providers?.google?.apiKey,
+        openaiKey: settings.providers?.openai?.apiKey,
+      });
     }
   } catch (err) {
     showStatus(err.message, 'error');
