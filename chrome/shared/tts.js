@@ -105,6 +105,9 @@ async function ttsError(response, name) {
   } catch {
     /* ignore */
   }
+  if (response.status === 401 || response.status === 403) {
+    detail = `${name} TTS rejected the API key — check it in Settings`;
+  }
   if (response.status === 429) detail = `${name} TTS quota exceeded — try again later`;
   throw new Error(detail);
 }
