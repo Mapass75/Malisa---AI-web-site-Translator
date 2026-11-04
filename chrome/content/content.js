@@ -528,6 +528,8 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
   }
 
   let activeTtsAudio = null;
+  let selectionTtsToken = 0;
+  const selectionAudioCache = new Map();
   let activeTtsButton = null;
 
   const LANG_BCP47 = {
@@ -550,6 +552,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
   }
 
   function stopSelectionTts() {
+    selectionTtsToken++;
     if (activeTtsAudio) {
       activeTtsAudio.pause();
       activeTtsAudio.removeAttribute('src');
@@ -567,7 +570,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     return new Promise((resolve) => {
       browser.runtime.sendMessage({ type: 'GET_TTS_SETTINGS' }, (response) => {
         if (browser.runtime.lastError || !response?.ok) {
-          resolve({ enabled: true, engine: 'browser', voice: 'nova', model: 'tts-1' });
+          resolve({ enabled: true, speech: { engine: 'browser' } });
           return;
         }
         resolve(response.settings);
@@ -591,25 +594,43 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       return;
     }
 
-    const speechEngine = settings.speech?.engine ?? 'browser';
-    if (speechEngine !== 'browser' || settings.engine === 'openai') {
+    const speech = settings.speech ?? {};
+    if ((speech.engine ?? 'browser') !== 'browser') {
+      const token = ++selectionTtsToken;
       button.disabled = true;
-      browser.runtime.sendMessage({ type: 'SPEAK_SELECTION', text }, (response) => {
-        button.disabled = false;
-        if (browser.runtime.lastError || !response?.ok) {
-          button.title =
-            t('selectionTtsError', uiLang) +
-            (response?.error || browser.runtime.lastError?.message || '');
-          stopSelectionTts();
-          return;
+      try {
+        for (const chunk of splitSelectionForSpeech(text)) {
+          const cacheKey = `${speech.engine}|${langCode}|${chunk}`;
+          let audioData = selectionAudioCache.get(cacheKey);
+          if (!audioData) {
+            audioData = await requestSelectionSpeech(chunk, langCode);
+            selectionAudioCache.set(cacheKey, audioData);
+          }
+          if (token !== selectionTtsToken) return;
+          button.disabled = false;
+          button.title = t('selectionSpeak', uiLang);
+          const audio = new Audio(`data:${audioData.mimeType};base64,${audioData.audioBase64}`);
+          activeTtsAudio = audio;
+          await new Promise((resolve, reject) => {
+            audio.addEventListener('ended', resolve);
+            audio.addEventListener('pause', resolve);
+            audio.addEventListener('error', () => reject(new Error('Audio playback failed')));
+            audio.play().catch(reject);
+          });
+          if (token !== selectionTtsToken) return;
         }
-        button.title = t('selectionSpeak', uiLang);
-        const audio = new Audio(`data:${response.mimeType};base64,${response.audioBase64}`);
-        activeTtsAudio = audio;
-        audio.addEventListener('ended', () => stopSelectionTts());
-        audio.addEventListener('error', () => stopSelectionTts());
-        audio.play().catch(() => stopSelectionTts());
-      });
+        stopSelectionTts();
+      } catch (err) {
+        if (token !== selectionTtsToken) return;
+        button.disabled = false;
+        button.title = t('selectionTtsError', uiLang) + (err?.message || '');
+        // Cloud engine failed (no key, 401, 429, network, no voice) — fall back to browser voices.
+        if (window.speechSynthesis?.getVoices().length) {
+          speakWithBrowserVoice(text, langCode, speech);
+        } else {
+          stopSelectionTts();
+        }
+      }
       return;
     }
 
@@ -617,10 +638,47 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       stopSelectionTts();
       return;
     }
+    speakWithBrowserVoice(text, langCode, speech);
+  }
+
+  function requestSelectionSpeech(text, lang) {
+    return new Promise((resolve, reject) => {
+      browser.runtime.sendMessage({ type: 'SPEAK_SELECTION', text, lang }, (response) => {
+        if (browser.runtime.lastError || !response?.ok) {
+          reject(new Error(response?.error || browser.runtime.lastError?.message || ''));
+          return;
+        }
+        resolve({ audioBase64: response.audioBase64, mimeType: response.mimeType });
+      });
+    });
+  }
+
+  function splitSelectionForSpeech(text, maxLen = 400) {
+    const chunks = [];
+    let chunk = '';
+    for (const piece of text.split(/(?<=[.!?;:\n])\s+|\n+/)) {
+      if (!piece.trim()) continue;
+      const candidate = chunk ? `${chunk} ${piece}` : piece;
+      if (candidate.length > maxLen && chunk) {
+        chunks.push(chunk);
+        chunk = piece;
+      } else {
+        chunk = candidate;
+      }
+      while (chunk.length > maxLen) {
+        const cut = chunk.slice(0, maxLen).lastIndexOf(' ');
+        chunks.push(chunk.slice(0, cut > 60 ? cut : maxLen));
+        chunk = chunk.slice(cut > 60 ? cut : maxLen);
+      }
+    }
+    if (chunk) chunks.push(chunk);
+    return chunks;
+  }
+
+  function speakWithBrowserVoice(text, langCode, speech) {
     const utter = new SpeechSynthesisUtterance(text);
     const bcp = langToBcp47(langCode);
     if (bcp) utter.lang = bcp;
-    const speech = settings.speech ?? {};
     const voices = window.speechSynthesis.getVoices();
     const namedVoice = speech.voice && voices.find((v) => v.name === speech.voice);
     const langVoice =

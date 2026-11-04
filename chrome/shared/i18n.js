@@ -85,9 +85,9 @@ const MESSAGES = {
     freeTier: 'Free tier',
     freeTierChecked: 'Limits may change — last checked {d}.',
     freeEmailLabel: 'MyMemory email (optional — raises the daily quota)',
-    speechTitle: 'Speech (text box Listen buttons)',
+    speechTitle: 'Speech',
     speechNote: 'Browser voices are free and offline. Cloud voices have free monthly limits and may need billing enabled.',
-    speechEngine: 'Speech provider',
+    speechEngine: 'Speech engine / provider',
     speechVoice: 'Voice',
     speechRate: 'Speed',
     speechPitch: 'Pitch',
@@ -147,6 +147,7 @@ const MESSAGES = {
     selectionTtsModel: 'OpenAI TTS model',
     selectionTtsHint:
       'Speak buttons read the original and translated text. OpenAI TTS uses your OpenAI API key and is billed separately from translation.',
+    speakButtonsHint: 'Speak buttons read the original and translated text.',
     translateTextTitle: 'Translate text',
     translateTextPlaceholder: 'Enter text to translate...',
     translateText: 'Translate',
@@ -267,6 +268,7 @@ MESSAGES.hr = L({
   selectionTtsModel: 'OpenAI TTS model',
   selectionTtsHint:
     'Gumbi čitaju original i prijevod. OpenAI TTS koristi OpenAI API ključ i naplaćuje se odvojeno od prijevoda.',
+  speakButtonsHint: 'Gumbi čitaju original i prijevod.',
   translateTextTitle: 'Prevedi tekst',
   translateTextPlaceholder: 'Unesi tekst za prijevod...',
   translateText: 'Prevedi',

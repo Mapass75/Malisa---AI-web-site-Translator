@@ -30,10 +30,6 @@ const translationCacheCount = document.getElementById('translationCacheCount');
 const clearCacheBtn = document.getElementById('clearCacheBtn');
 const clearCacheStatus = document.getElementById('clearCacheStatus');
 const selectionTtsEnabled = document.getElementById('selectionTtsEnabled');
-const selectionTtsEngine = document.getElementById('selectionTtsEngine');
-const selectionTtsVoice = document.getElementById('selectionTtsVoice');
-const selectionTtsModel = document.getElementById('selectionTtsModel');
-const selectionTtsOpenAiFields = document.getElementById('selectionTtsOpenAiFields');
 const speechEngine = document.getElementById('speechEngine');
 const speechVoice = document.getElementById('speechVoice');
 const speechRate = document.getElementById('speechRate');
@@ -88,14 +84,8 @@ function applyOptionsI18n() {
   document.getElementById('labelParallel').textContent = t('parallelRequests', lang);
   document.getElementById('batchHint').textContent = t('batchHint', lang);
   document.getElementById('labelSkipDomains').textContent = t('skipDomains', lang);
-  document.getElementById('selectionTtsTitle').textContent = t('selectionTtsTitle', lang);
   document.getElementById('selectionTtsEnableLabel').textContent = t('selectionTtsEnable', lang);
-  document.getElementById('labelSelectionTtsEngine').textContent = t('selectionTtsEngine', lang);
-  document.getElementById('selectionTtsEngineBrowserOpt').textContent = t('selectionTtsEngineBrowser', lang);
-  document.getElementById('selectionTtsEngineOpenaiOpt').textContent = t('selectionTtsEngineOpenai', lang);
-  document.getElementById('labelSelectionTtsVoice').textContent = t('selectionTtsVoice', lang);
-  document.getElementById('labelSelectionTtsModel').textContent = t('selectionTtsModel', lang);
-  document.getElementById('selectionTtsHint').textContent = t('selectionTtsHint', lang);
+  document.getElementById('speechCustomTestBtn').textContent = t('testConnection', lang);
   document.getElementById('speechTitle').textContent = t('speechTitle', lang);
   document.getElementById('speechNote').textContent = t('speechNote', lang);
   document.getElementById('labelSpeechEngine').textContent = t('speechEngine', lang);
@@ -166,24 +156,6 @@ function populateProviders(selected) {
     .join('');
 }
 
-function populateTtsVoices(selected) {
-  selectionTtsVoice.innerHTML = OPENAI_TTS_VOICES.map(
-    (voice) =>
-      `<option value="${voice}" ${voice === selected ? 'selected' : ''}>${escapeHtml(voice)}</option>`
-  ).join('');
-}
-
-function populateTtsModels(selected) {
-  selectionTtsModel.innerHTML = OPENAI_TTS_MODELS.map(
-    (model) =>
-      `<option value="${model}" ${model === selected ? 'selected' : ''}>${escapeHtml(model)}</option>`
-  ).join('');
-}
-
-function updateTtsOpenAiFieldsVisibility() {
-  selectionTtsOpenAiFields.classList.toggle('hidden', selectionTtsEngine.value !== 'openai');
-}
-
 function populateSpeechEngines(selected) {
   speechEngine.innerHTML = Object.entries(SPEECH_ENGINES)
     .map(([id, e]) => `<option value="${id}" ${id === selected ? 'selected' : ''}>${escapeHtml(e.label)}</option>`)
@@ -216,6 +188,9 @@ function updateSpeechFields() {
   document.getElementById('speechPollyFields').hidden = engine !== 'polly';
   document.getElementById('speechCustomFields').hidden = engine !== 'custom';
   const meta = SPEECH_ENGINES[engine];
+  document.getElementById('selectionTtsHint').textContent = engine === 'openai'
+    ? t('selectionTtsHint', lang)
+    : `${t('speakButtonsHint', lang)} ${meta.dataNote}`;
   speechEngineInfo.textContent = `${meta.freeInfo} ${t('freeTierChecked', lang, { d: FREE_TIER_CHECKED })}`;
   if (meta.keyUrl) {
     speechEngineLink.hidden = false;
@@ -658,10 +633,6 @@ async function loadSettings() {
   skipDomains.value = settings.skipDomains.join('\n');
   translationCacheEnabled.checked = settings.translationCacheEnabled !== false;
   selectionTtsEnabled.checked = settings.selectionTtsEnabled !== false;
-  selectionTtsEngine.value = settings.selectionTtsEngine === 'openai' ? 'openai' : 'browser';
-  populateTtsVoices(settings.selectionTtsVoice ?? 'nova');
-  populateTtsModels(settings.selectionTtsModel ?? 'tts-1');
-  updateTtsOpenAiFieldsVisibility();
   const speech = settings.speech ?? {};
   populateSpeechEngines(speech.engine ?? 'browser');
   speechGoogleKey.value = speech.googleKey ?? '';
@@ -748,10 +719,8 @@ function collectSettings() {
     translationCacheEnabled: translationCacheEnabled.checked,
     translatorTheme: selectedTranslatorTheme,
     selectionTtsEnabled: selectionTtsEnabled.checked,
-    selectionTtsEngine: selectionTtsEngine.value === 'openai' ? 'openai' : 'browser',
-    selectionTtsVoice: selectionTtsVoice.value,
-    selectionTtsModel: selectionTtsModel.value,
     speech: collectSpeech(),
+    speechMigrated: true,
     providers,
   };
 }
@@ -829,10 +798,10 @@ clearCacheBtn.addEventListener('click', async () => {
   }
 });
 
-selectionTtsEngine.addEventListener('change', updateTtsOpenAiFieldsVisibility);
 speechEngine.addEventListener('change', updateSpeechFields);
 defaultLanguage.addEventListener('change', () => populateSpeechVoices(speechVoice.value));
 speechTestBtn.addEventListener('click', testSpeech);
+document.getElementById('speechCustomTestBtn').addEventListener('click', testSpeech);
 window.speechSynthesis?.addEventListener('voiceschanged', () => populateSpeechVoices(speechVoice.value));
 
 themeSegmentButtons.forEach((btn) => {

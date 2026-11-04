@@ -17,7 +17,7 @@ import {
   validateSelectionText,
   validateTtsText,
 } from '../shared/security.js';
-import { fetchOpenAiSpeech, fetchSpeech, OPENAI_TTS_MODELS, OPENAI_TTS_VOICES } from '../shared/tts.js';
+import { fetchSpeech } from '../shared/tts.js';
 
 const CONTEXT_MENU_ID = 'malisa-translate-selection';
 let settingsCache = null;
@@ -382,9 +382,6 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
           ok: true,
           settings: {
             enabled: settings.selectionTtsEnabled !== false,
-            engine: settings.selectionTtsEngine === 'openai' ? 'openai' : 'browser',
-            voice: settings.selectionTtsVoice ?? 'nova',
-            model: settings.selectionTtsModel ?? 'tts-1',
             speech: {
               engine: settings.speech?.engine ?? 'browser',
               voice: settings.speech?.voice ?? '',
@@ -405,39 +402,17 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
         if (settings.selectionTtsEnabled === false) {
           throw new Error('Text-to-speech is disabled in Settings');
         }
-        const speechEngine = settings.speech?.engine;
-        if (speechEngine && speechEngine !== 'browser') {
-          const audio = await fetchSpeech(
-            speechEngine,
-            text,
-            { ...settings.speech, lang: settings.defaultLanguage },
-            {
-              geminiKey: settings.providers?.google?.apiKey,
-              openaiKey: settings.providers?.openai?.apiKey,
-            }
-          );
-          sendResponse({ ok: true, ...audio });
-          return;
-        }
-        if (settings.selectionTtsEngine !== 'openai') {
-          throw new Error('AI TTS is not enabled');
-        }
-        const openai = settings.providers?.openai;
-        if (!openai?.apiKey) {
-          throw new Error('OpenAI API key is not configured');
-        }
-        const voice = OPENAI_TTS_VOICES.includes(settings.selectionTtsVoice)
-          ? settings.selectionTtsVoice
-          : 'nova';
-        const model = OPENAI_TTS_MODELS.includes(settings.selectionTtsModel)
-          ? settings.selectionTtsModel
-          : 'tts-1';
-        const audio = await fetchOpenAiSpeech({
+        const engine = settings.speech?.engine ?? 'browser';
+        if (engine === 'browser') throw new Error('Browser voices play in the page');
+        const audio = await fetchSpeech(
+          engine,
           text,
-          apiKey: openai.apiKey,
-          voice,
-          model,
-        });
+          { ...settings.speech, lang: message.lang || settings.defaultLanguage },
+          {
+            geminiKey: settings.providers?.google?.apiKey,
+            openaiKey: settings.providers?.openai?.apiKey,
+          }
+        );
         sendResponse({ ok: true, ...audio });
       })
       .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));

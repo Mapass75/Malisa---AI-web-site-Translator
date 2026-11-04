@@ -14,6 +14,7 @@ Malisa is a free, open-source browser extension (Chrome, Edge, Firefox) that tra
 ### Listen
 - Play, pause and stop for the original and translated text in the text box, and read-aloud on translated selection
 - Browser voices by default (voice, speed, pitch); optional Google Cloud TTS, Gemini TTS, ElevenLabs, OpenAI TTS, Microsoft Azure Speech, Amazon Polly, or a custom self-hosted OpenAI-compatible endpoint (e.g. Kokoro). Free-tier quotas can change.
+- One Settings → Speech choice is used everywhere: popup Listen buttons and the Speak buttons in the selection popup. If a cloud provider fails (no key, 401, 429, network), Malisa falls back to browser voices.
 
 ### Providers
 - OpenAI, Anthropic (Claude), Google Gemini, Grok (xAI), DeepSeek, Mistral, Groq, OpenRouter — one shared OpenAI-compatible client where applicable
