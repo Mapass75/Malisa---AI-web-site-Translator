@@ -36,12 +36,22 @@ export async function getSettings() {
       stored.translationCacheEnabled ?? DEFAULT_SETTINGS.translationCacheEnabled,
     translatorTheme: stored.translatorTheme ?? DEFAULT_SETTINGS.translatorTheme,
     selectionTtsEnabled: stored.selectionTtsEnabled ?? DEFAULT_SETTINGS.selectionTtsEnabled,
-    selectionTtsEngine: stored.selectionTtsEngine ?? DEFAULT_SETTINGS.selectionTtsEngine,
-    selectionTtsVoice: stored.selectionTtsVoice ?? DEFAULT_SETTINGS.selectionTtsVoice,
-    selectionTtsModel: stored.selectionTtsModel ?? DEFAULT_SETTINGS.selectionTtsModel,
-    speech: { ...DEFAULT_SETTINGS.speech, ...(stored.speech ?? {}) },
+    speech: migrateSpeech(stored),
+    speechMigrated: true,
     providers,
   };
+}
+
+// Older versions had a separate selection-popup engine (browser | openai).
+// Fold it into the single speech config once, keeping the user's choice.
+function migrateSpeech(stored) {
+  const speech = { ...DEFAULT_SETTINGS.speech, ...(stored.speech ?? {}) };
+  if (stored.speechMigrated || stored.selectionTtsEngine !== 'openai') return speech;
+  if ((stored.speech?.engine ?? 'browser') !== 'browser') return speech;
+  speech.engine = 'openai';
+  if (!stored.speech?.openaiVoice && stored.selectionTtsVoice) speech.openaiVoice = stored.selectionTtsVoice;
+  if (!stored.speech?.openaiModel && stored.selectionTtsModel) speech.openaiModel = stored.selectionTtsModel;
+  return speech;
 }
 
 export async function saveSettings(settings) {

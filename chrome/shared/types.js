@@ -152,42 +152,53 @@ export const FREE_TIER_INFO = {
 };
 export const FREE_TIER_CHECKED = '2026-11-04';
 
-// Text-to-speech engines. 'openai' is kept for the selection-reader feature.
+// Text-to-speech engines — one list for popup Listen buttons and selection-popup Speak buttons.
 export const SPEECH_ENGINES = {
-  browser: { label: 'Browser voices', freeInfo: 'Free, built into your browser.' },
+  browser: {
+    label: 'Browser (free, system voice)',
+    freeInfo: 'Free, built into your browser.',
+    dataNote: 'Browser voices are free and work offline.',
+  },
   google: {
     label: 'Google Cloud TTS',
     keyUrl: 'https://console.cloud.google.com/apis/library/texttospeech.googleapis.com',
     freeInfo: 'Needs billing enabled; free monthly quota (about 4M characters for Standard voices).',
+    dataNote: 'Google Cloud TTS uses its own API key and is billed separately from translation.',
   },
   gemini: {
     label: 'Gemini TTS',
     freeInfo:
       'Uses the Gemini API key. Free-tier content may be used by Google to improve its products, so avoid sensitive text.',
+    dataNote: 'Gemini TTS uses your Gemini API key from the translation providers.',
   },
   elevenlabs: {
     label: 'ElevenLabs',
     keyUrl: 'https://elevenlabs.io/app/settings/api-keys',
     freeInfo: 'Free up to about 10,000 characters/month, attribution required, no commercial license.',
+    dataNote: 'ElevenLabs uses its own API key and is billed separately from translation.',
   },
   openai: {
     label: 'OpenAI TTS',
     freeInfo: 'Uses the OpenAI API key. Paid per character.',
+    dataNote: 'OpenAI TTS uses your OpenAI API key and is billed separately from translation.',
   },
   azure: {
     label: 'Microsoft Azure Speech',
     keyUrl: 'https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices',
     freeInfo: 'Free tier (F0): 500,000 characters/month, 20 requests/min.',
+    dataNote: 'Azure Speech uses its own key and is billed separately from translation.',
   },
   polly: {
     label: 'Amazon Polly',
     keyUrl: 'https://console.aws.amazon.com/iam/home#/security_credentials',
     freeInfo:
       'Free for the first 12 months (5M characters/month), then paid. Use an IAM user with only the polly:SynthesizeSpeech permission.',
+    dataNote: 'Amazon Polly uses your AWS credentials and is billed separately from translation.',
   },
   custom: {
     label: 'Custom TTS (self-hosted)',
     freeInfo: 'Free if you host it yourself (e.g. Kokoro). Check which languages the model supports.',
+    dataNote: 'Custom TTS sends text only to the server you configure.',
   },
 };
 
@@ -212,9 +223,6 @@ export const DEFAULT_SETTINGS = {
   translationCacheEnabled: true,
   translatorTheme: 'system',
   selectionTtsEnabled: true,
-  selectionTtsEngine: 'browser',
-  selectionTtsVoice: 'nova',
-  selectionTtsModel: 'tts-1',
   speech: {
     engine: 'browser',
     voice: '',

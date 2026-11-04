@@ -67,34 +67,6 @@
         </section>
 
         <section class="card">
-          <h2 id="selectionTtsTitle"></h2>
-          <label class="consent-label cache-toggle">
-            <input type="checkbox" id="selectionTtsEnabled" checked />
-            <span id="selectionTtsEnableLabel"></span>
-          </label>
-          <div class="field">
-            <label id="labelSelectionTtsEngine" for="selectionTtsEngine"></label>
-            <select id="selectionTtsEngine">
-              <option value="browser" id="selectionTtsEngineBrowserOpt"></option>
-              <option value="openai" id="selectionTtsEngineOpenaiOpt"></option>
-            </select>
-          </div>
-          <div class="field" id="selectionTtsOpenAiFields">
-            <div class="field-row">
-              <div class="field">
-                <label id="labelSelectionTtsVoice" for="selectionTtsVoice"></label>
-                <select id="selectionTtsVoice"></select>
-              </div>
-              <div class="field">
-                <label id="labelSelectionTtsModel" for="selectionTtsModel"></label>
-                <select id="selectionTtsModel"></select>
-              </div>
-            </div>
-          </div>
-          <p id="selectionTtsHint" class="hint cache-hint"></p>
-        </section>
-
-        <section class="card">
           <h2 id="speechTitle"></h2>
           <div class="field">
             <label id="labelSpeechEngine" for="speechEngine"></label>
@@ -103,6 +75,10 @@
             <span id="speechEngineLink" class="hint key-link" hidden></span>
             <p class="hint" id="speechNote"></p>
           </div>
+          <label class="consent-label cache-toggle">
+            <input type="checkbox" id="selectionTtsEnabled" checked />
+            <span id="selectionTtsEnableLabel"></span>
+          </label>
           <div class="field" id="speechBrowserFields">
             <label id="labelSpeechVoice" for="speechVoice"></label>
             <select id="speechVoice"></select>
@@ -154,6 +130,9 @@
             <input type="text" id="speechCustomModel" placeholder="kokoro" />
             <label id="labelSpeechCustomVoice" for="speechCustomVoice"></label>
             <input type="text" id="speechCustomVoice" placeholder="af_heart" />
+            <div class="cache-actions">
+              <button type="button" id="speechCustomTestBtn" class="btn secondary"></button>
+            </div>
           </div>
           <div class="field" id="speechElevenlabsFields" hidden>
             <label id="labelSpeechElevenlabsKey" for="speechElevenlabsKey"></label>
@@ -175,6 +154,7 @@
             <button type="button" id="speechTestBtn" class="btn secondary"></button>
             <span id="speechTestStatus" class="status-text"></span>
           </div>
+          <p id="selectionTtsHint" class="hint cache-hint"></p>
         </section>
 
         <section class="card">
