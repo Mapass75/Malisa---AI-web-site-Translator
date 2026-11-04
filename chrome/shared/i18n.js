@@ -86,6 +86,7 @@ const MESSAGES = {
     freeTierChecked: 'Limits may change — last checked {d}.',
     freeEmailLabel: 'MyMemory email (optional — raises the daily quota)',
     speechTitle: 'Speech (text box Listen buttons)',
+    speechNote: 'Browser voices are free and offline. Cloud voices have free monthly limits and may need billing enabled.',
     speechEngine: 'Speech provider',
     speechVoice: 'Voice',
     speechRate: 'Speed',

@@ -17,7 +17,7 @@ import {
   validateSelectionText,
   validateTtsText,
 } from '../shared/security.js';
-import { fetchOpenAiSpeech, OPENAI_TTS_MODELS, OPENAI_TTS_VOICES } from '../shared/tts.js';
+import { fetchOpenAiSpeech, fetchSpeech, OPENAI_TTS_MODELS, OPENAI_TTS_VOICES } from '../shared/tts.js';
 
 const CONTEXT_MENU_ID = 'malisa-translate-selection';
 let settingsCache = null;
@@ -382,6 +382,12 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
             engine: settings.selectionTtsEngine === 'openai' ? 'openai' : 'browser',
             voice: settings.selectionTtsVoice ?? 'nova',
             model: settings.selectionTtsModel ?? 'tts-1',
+            speech: {
+              engine: settings.speech?.engine ?? 'browser',
+              voice: settings.speech?.voice ?? '',
+              rate: settings.speech?.rate ?? 1,
+              pitch: settings.speech?.pitch ?? 1,
+            },
           },
         })
       )
@@ -395,6 +401,17 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
       .then(async (settings) => {
         if (settings.selectionTtsEnabled === false) {
           throw new Error('Text-to-speech is disabled in Settings');
+        }
+        const speechEngine = settings.speech?.engine;
+        if (speechEngine && speechEngine !== 'browser') {
+          const audio = await fetchSpeech(
+            speechEngine,
+            text,
+            settings.speech,
+            settings.providers?.google?.apiKey
+          );
+          sendResponse({ ok: true, ...audio });
+          return;
         }
         if (settings.selectionTtsEngine !== 'openai') {
           throw new Error('AI TTS is not enabled');

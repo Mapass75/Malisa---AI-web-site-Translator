@@ -458,7 +458,8 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       return;
     }
 
-    if (settings.engine === 'openai') {
+    const speechEngine = settings.speech?.engine ?? 'browser';
+    if (speechEngine !== 'browser' || settings.engine === 'openai') {
       button.disabled = true;
       browser.runtime.sendMessage({ type: 'SPEAK_SELECTION', text }, (response) => {
         button.disabled = false;
@@ -486,6 +487,19 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     const utter = new SpeechSynthesisUtterance(text);
     const bcp = langToBcp47(langCode);
     if (bcp) utter.lang = bcp;
+    const speech = settings.speech ?? {};
+    const voices = window.speechSynthesis.getVoices();
+    const namedVoice = speech.voice && voices.find((v) => v.name === speech.voice);
+    const langVoice =
+      (!namedVoice && bcp
+        ? voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(bcp.toLowerCase()))
+        : null) ?? (!namedVoice ? voices[0] : null);
+    if (namedVoice ?? langVoice) {
+      utter.voice = namedVoice ?? langVoice;
+      utter.lang = utter.voice.lang;
+    }
+    utter.rate = Math.min(4, Math.max(0.5, +speech.rate || 1));
+    utter.pitch = Math.min(2, Math.max(0, +speech.pitch || 1));
     utter.onend = () => stopSelectionTts();
     utter.onerror = () => stopSelectionTts();
     speechSynthesis.speak(utter);

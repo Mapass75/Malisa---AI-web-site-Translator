@@ -84,6 +84,7 @@ function applyOptionsI18n() {
   document.getElementById('labelSelectionTtsModel').textContent = t('selectionTtsModel', lang);
   document.getElementById('selectionTtsHint').textContent = t('selectionTtsHint', lang);
   document.getElementById('speechTitle').textContent = t('speechTitle', lang);
+  document.getElementById('speechNote').textContent = t('speechNote', lang);
   document.getElementById('labelSpeechEngine').textContent = t('speechEngine', lang);
   document.getElementById('labelSpeechVoice').textContent = t('speechVoice', lang);
   document.getElementById('labelSpeechGoogleKey').textContent = t('speechGoogleKey', lang);
