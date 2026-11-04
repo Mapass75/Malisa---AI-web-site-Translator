@@ -491,9 +491,9 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     const voices = window.speechSynthesis.getVoices();
     const namedVoice = speech.voice && voices.find((v) => v.name === speech.voice);
     const langVoice =
-      !namedVoice && bcp
+      (!namedVoice && bcp
         ? voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(bcp.toLowerCase()))
-        : null;
+        : null) ?? (!namedVoice ? voices[0] : null);
     if (namedVoice ?? langVoice) {
       utter.voice = namedVoice ?? langVoice;
       utter.lang = utter.voice.lang;
