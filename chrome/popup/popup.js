@@ -142,7 +142,7 @@ async function speakWithBrowser(text, langCode, btn, stopBtn, cfg) {
   const voice =
     (cfg.voice && voices.find((v) => v.name === cfg.voice)) ??
     voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(code)) ??
-    (code ? null : voices[0]);
+    voices[0]; // system default — better than failing when the language has no voice
   if (!voice) {
     showStatus(t('noVoice', uiLang), 'error');
     return;
