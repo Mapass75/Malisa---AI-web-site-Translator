@@ -90,7 +90,24 @@ function stopSpeech() {
   }
 }
 
-function speak(text, langCode, btn) {
+function getVoicesOnce() {
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length) return Promise.resolve(voices);
+  // Voice list loads asynchronously — wait once for voiceschanged (bounded).
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1500);
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      () => {
+        clearTimeout(timer);
+        resolve(window.speechSynthesis.getVoices());
+      },
+      { once: true }
+    );
+  });
+}
+
+async function speak(text, langCode, btn) {
   if (!('speechSynthesis' in window)) {
     showStatus(t('noVoice', uiLang), 'error');
     return;
@@ -100,7 +117,7 @@ function speak(text, langCode, btn) {
     return;
   }
   stopSpeech();
-  const voices = window.speechSynthesis.getVoices();
+  const voices = await getVoicesOnce();
   const code = langCode === 'auto' ? '' : (langCode ?? '').toLowerCase();
   const voice =
     voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(code)) ??

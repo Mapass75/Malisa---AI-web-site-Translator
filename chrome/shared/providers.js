@@ -10,10 +10,12 @@ function targetLabel(code) {
   return langCache.get(code);
 }
 
-function buildPrompt(blocks, targetLanguage) {
+function buildPrompt(blocks, targetLanguage, sourceLanguage) {
   const lang = targetLabel(targetLanguage);
+  const from =
+    sourceLanguage && sourceLanguage !== 'auto' ? ` from ${targetLabel(sourceLanguage)}` : '';
   const lines = blocks.map((b) => `${b.id}|${b.text}`).join('\n');
-  return `Translate each line to ${lang}. Web page UI text (buttons, labels, menus, product names where appropriate). Return one translation per id.\nJSON only: {"translations":[{"id":"0","t":"..."}]}\n${lines}`;
+  return `Translate each line${from} to ${lang}. Web page UI text (buttons, labels, menus, product names where appropriate). Return one translation per id.\nJSON only: {"translations":[{"id":"0","t":"..."}]}\n${lines}`;
 }
 
 const SYSTEM =
@@ -147,13 +149,15 @@ async function translateWithGtx(baseUrl, opts) {
   }
 
   // Line counts mismatched — fall back to one request per block.
+  // Failed requests propagate so callers see the error instead of a
+  // silently-untranslated block reported as complete.
   const results = [];
   for (const block of opts.blocks) {
-    try {
-      results.push({ id: block.id, translated: (await gtxOne(baseUrl, block.text, opts.targetLanguage, opts.sourceLanguage)) || block.text });
-    } catch {
-      results.push({ id: block.id, translated: block.text });
-    }
+    results.push({
+      id: block.id,
+      translated:
+        (await gtxOne(baseUrl, block.text, opts.targetLanguage, opts.sourceLanguage)) || block.text,
+    });
   }
   return results;
 }
@@ -190,7 +194,7 @@ async function translateWithOllama(opts) {
     stream: false,
     messages: [
       { role: 'system', content: SYSTEM },
-      { role: 'user', content: buildPrompt(opts.blocks, opts.targetLanguage) },
+      { role: 'user', content: buildPrompt(opts.blocks, opts.targetLanguage, opts.sourceLanguage) },
     ],
   };
 
@@ -221,7 +225,7 @@ function ollamaOpenAiBase(baseUrl) {
   return trimmed.endsWith('/v1') ? trimmed : `${trimmed}/v1`;
 }
 
-async function translateOpenAICompatible(baseUrl, apiKey, model, blocks, targetLanguage, extraHeaders = {}) {
+async function translateOpenAICompatible(baseUrl, apiKey, model, blocks, targetLanguage, sourceLanguage, extraHeaders = {}) {
   const headers = {
     'Content-Type': 'application/json',
     ...buildAuthHeaders(apiKey, extraHeaders),
@@ -237,7 +241,7 @@ async function translateOpenAICompatible(baseUrl, apiKey, model, blocks, targetL
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: SYSTEM },
-        { role: 'user', content: buildPrompt(blocks, targetLanguage) },
+        { role: 'user', content: buildPrompt(blocks, targetLanguage, sourceLanguage) },
       ],
     }),
   });
@@ -258,7 +262,7 @@ async function translateWithAnthropic(opts) {
       model: opts.model,
       max_tokens: estimateMaxTokens(opts.blocks),
       temperature: 0,
-      messages: [{ role: 'user', content: buildPrompt(opts.blocks, opts.targetLanguage) }],
+      messages: [{ role: 'user', content: buildPrompt(opts.blocks, opts.targetLanguage, opts.sourceLanguage) }],
       system: SYSTEM,
     }),
   });
@@ -274,7 +278,7 @@ async function translateWithGoogle(opts) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: buildPrompt(opts.blocks, opts.targetLanguage) }] }],
+      contents: [{ parts: [{ text: buildPrompt(opts.blocks, opts.targetLanguage, opts.sourceLanguage) }] }],
       systemInstruction: { parts: [{ text: SYSTEM }] },
       generationConfig: {
         temperature: 0,
@@ -308,6 +312,7 @@ export async function translate(provider, opts) {
     opts.model,
     opts.blocks,
     opts.targetLanguage,
+    opts.sourceLanguage,
     extraHeaders
   );
 }

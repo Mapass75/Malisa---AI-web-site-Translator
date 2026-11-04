@@ -146,7 +146,12 @@ async function resolveProvider(settings, provider = settings.activeProvider) {
 async function translateSingleText(text, targetLanguage, providerId, sourceLanguage = 'auto') {
   const settings = await getCachedSettings();
   const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings, providerId);
-  const cached = await getCachedTranslations([text], targetLanguage, cacheEnabled);
+  const cached = await getCachedTranslations(
+    [text],
+    targetLanguage,
+    cacheEnabled,
+    sourceLanguage
+  );
   if (cached.has(text)) return cached.get(text);
 
   const results = await translateBatchWithRetry(
@@ -155,10 +160,52 @@ async function translateSingleText(text, targetLanguage, providerId, sourceLangu
     [{ id: '0', text }]
   );
   const translated = results[0]?.translated ?? text;
-  cacheTranslations([{ text, translation: translated }], targetLanguage, cacheEnabled).catch(
-    () => {}
-  );
+  cacheTranslations(
+    [{ text, translation: translated }],
+    targetLanguage,
+    cacheEnabled,
+    sourceLanguage
+  ).catch(() => {});
   return translated;
+}
+
+const POPUP_TEXT_LIMIT = 40000;
+const POPUP_CHUNK_SIZE = 3000;
+
+function validatePopupText(text) {
+  if (typeof text !== 'string') throw new Error('No text to translate');
+  const trimmed = text.trim();
+  if (!trimmed || !/\p{L}/u.test(trimmed)) throw new Error('No text to translate');
+  if (trimmed.length > POPUP_TEXT_LIMIT) {
+    throw new Error(`Text is too long (${trimmed.length} chars, max ${POPUP_TEXT_LIMIT})`);
+  }
+  return trimmed;
+}
+
+// Split long popup input at paragraph/space boundaries and rejoin.
+function chunkPopupText(text) {
+  const chunks = [];
+  let remaining = text;
+  while (remaining.length > POPUP_CHUNK_SIZE) {
+    let cut = remaining.lastIndexOf('\n', POPUP_CHUNK_SIZE);
+    if (cut < POPUP_CHUNK_SIZE / 2) cut = remaining.lastIndexOf(' ', POPUP_CHUNK_SIZE);
+    if (cut < POPUP_CHUNK_SIZE / 2) cut = POPUP_CHUNK_SIZE;
+    chunks.push(remaining.slice(0, cut));
+    remaining = remaining.slice(cut).trimStart();
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
+
+async function translatePopupText(text, targetLanguage, providerId, sourceLanguage = 'auto') {
+  const chunks = chunkPopupText(validatePopupText(text));
+  const translated = [];
+  for (const chunk of chunks) {
+    translated.push(
+      await translateSingleText(chunk, targetLanguage, providerId, sourceLanguage)
+    );
+  }
+  return translated.join('\n');
 }
 
 async function translateAllBlocks(blocks, targetLanguage, tabId) {
@@ -270,11 +317,16 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
 
   if (message.type === 'TRANSLATE_TEXT') {
     try {
-      const text = validateSelectionText(message.text);
+      validatePopupText(message.text);
       if (!isValidLanguage(message.targetLanguage)) {
         throw new Error('Invalid target language');
       }
-      translateSingleText(text, message.targetLanguage, message.provider, message.sourceLanguage)
+      translatePopupText(
+        message.text,
+        message.targetLanguage,
+        message.provider,
+        message.sourceLanguage
+      )
         .then((translated) => sendResponse({ ok: true, translated }))
         .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
     } catch (err) {
