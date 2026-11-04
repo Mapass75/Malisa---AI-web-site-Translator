@@ -5,7 +5,7 @@ import { dedupeBlocks } from '../shared/dedupe.js';
 import { translate } from '../shared/providers.js';
 import { chunkBlocks, runConcurrent } from '../shared/batcher.js';
 import { fetchModels, refreshAllModels } from '../shared/models.js';
-import { getProviderLimits, isProviderReady } from '../shared/types.js';
+import { PROVIDERS, getProviderLimits, isProviderReady } from '../shared/types.js';
 import { getUiLanguage, t } from '../shared/i18n.js';
 import {
   assertTrustedSender,
@@ -20,6 +20,7 @@ import {
 import { fetchSpeech } from '../shared/tts.js';
 
 const CONTEXT_MENU_ID = 'malisa-translate-selection';
+const PAGE_MENU_ID = 'malisa-translate-page';
 let settingsCache = null;
 let settingsCacheTime = 0;
 const SETTINGS_TTL = 60000;
@@ -49,6 +50,11 @@ async function setupContextMenu() {
     id: CONTEXT_MENU_ID,
     title: t('contextMenuTranslate', lang),
     contexts: ['selection'],
+  });
+  browser.contextMenus.create({
+    id: PAGE_MENU_ID,
+    title: t('contextMenuTranslatePage', lang),
+    contexts: ['page'],
   });
 }
 
@@ -299,7 +305,45 @@ async function translateSelection(text, tabId) {
   });
 }
 
+function showTabNotice(tabId, text) {
+  browser.action.setBadgeText({ tabId, text: text ? '!' : '' }).catch(() => {});
+  if (text) browser.action.setBadgeBackgroundColor({ tabId, color: '#d93025' }).catch(() => {});
+  browser.action.setTitle({ tabId, title: text || '' }).catch(() => {});
+}
+
+// Same flow as the popup's "Translate page" button, using the saved provider and target language.
+async function translatePageFromMenu(tabId) {
+  showTabNotice(tabId, '');
+  const [settings, lang] = await Promise.all([getSettings(), getUiLanguage()]);
+  const provider = settings.activeProvider;
+  const targetLanguage = settings.defaultLanguage;
+  let setupError = '';
+  if (!isProviderReady(provider, settings.providers?.[provider])) {
+    setupError = PROVIDERS[provider]?.apiKeyOptional
+      ? t('setProviderUrl', lang)
+      : t('enterApiKey', lang, { provider: PROVIDERS[provider]?.label ?? provider });
+  } else if (!isValidLanguage(targetLanguage)) {
+    setupError = 'Invalid target language';
+  }
+  if (setupError) {
+    await notifyTabEnsured(tabId, { type: 'SELECTION_ERROR', error: setupError }).catch(() =>
+      showTabNotice(tabId, setupError)
+    );
+    browser.runtime.openOptionsPage().catch(() => {});
+    return;
+  }
+  try {
+    await notifyTabEnsured(tabId, { type: 'TRANSLATE_PAGE', targetLanguage });
+  } catch {
+    showTabNotice(tabId, t('contextMenuPageUnavailable', lang));
+  }
+}
+
 browser.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === PAGE_MENU_ID) {
+    if (tab?.id) translatePageFromMenu(tab.id).catch(() => {});
+    return;
+  }
   if (info.menuItemId !== CONTEXT_MENU_ID || !tab?.id) return;
   const text = info.selectionText?.trim();
   if (!text) return;

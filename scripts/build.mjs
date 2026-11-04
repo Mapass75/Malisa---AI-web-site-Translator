@@ -19,7 +19,14 @@ const SKIP = new Set([
   'scripts',
   'public',
   '.gitignore',
+  'package.json',
+  'README.md',
+  'SECURITY.md',
+  'PRIVACY.md',
 ]);
+
+// Source-only files that the packaged extension never loads.
+const SKIP_FILES = new Set(['assets/icon16-template.svg', 'assets/malisa-source.png']);
 
 async function copySource(dest) {
   await rm(dest, { recursive: true, force: true });
@@ -27,7 +34,10 @@ async function copySource(dest) {
   const { readdir } = await import('node:fs/promises');
   for (const entry of await readdir(src, { withFileTypes: true })) {
     if (SKIP.has(entry.name)) continue;
-    await cp(path.join(src, entry.name), path.join(dest, entry.name), { recursive: true });
+    await cp(path.join(src, entry.name), path.join(dest, entry.name), {
+      recursive: true,
+      filter: (from) => !SKIP_FILES.has(path.relative(src, from).split(path.sep).join('/')),
+    });
   }
 }
 
@@ -46,7 +56,7 @@ async function buildFirefox() {
     bundle: true,
     format: 'iife',
     platform: 'browser',
-    target: 'firefox115',
+    target: 'firefox140',
     outfile: path.join(dest, 'background/bundle.js'),
     logLevel: 'warning',
   });
@@ -57,7 +67,10 @@ async function buildFirefox() {
   manifest.browser_specific_settings = {
     gecko: {
       id: 'malisa@translator.extension',
-      strict_min_version: '115.0',
+      // 140+ shows Firefox's built-in data collection consent.
+      strict_min_version: '140.0',
+      // Page/selected/typed text is sent to the translation or speech provider the user picks.
+      data_collection_permissions: { required: ['websiteContent'] },
     },
   };
   // options_page needs FF 126+; options_ui works on FF 115+.
