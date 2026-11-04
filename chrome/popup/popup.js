@@ -1,10 +1,11 @@
 import browser from '../shared/browser.js';
 import { getSettings, saveSettings } from '../shared/storage.js';
-import { LANGUAGES, PROVIDER_LABELS, PROVIDERS, isProviderReady } from '../shared/types.js';
+import { LANGUAGES, PROVIDER_LABELS, PROVIDERS, isProviderReady, FREE_TIER_INFO } from '../shared/types.js';
 import { escapeHtml } from '../shared/security.js';
 import { sendToActiveTab } from '../shared/tabs.js';
 import { getUiLanguage, t } from '../shared/i18n.js';
 import { applyDocumentTheme, watchSystemTheme } from '../shared/theme.js';
+import { fetchSpeech, splitForSpeech } from '../shared/tts.js';
 
 const languageSelect = document.getElementById('language');
 const providerSelect = document.getElementById('provider');
@@ -22,6 +23,8 @@ const textTargetSelect = document.getElementById('textTargetLanguage');
 const swapLangBtn = document.getElementById('swapLangBtn');
 const listenInputBtn = document.getElementById('listenInputBtn');
 const listenOutputBtn = document.getElementById('listenOutputBtn');
+const stopInputBtn = document.getElementById('stopInputBtn');
+const stopOutputBtn = document.getElementById('stopOutputBtn');
 
 let uiLang = 'en';
 let unwatchSystem = () => {};
@@ -42,6 +45,8 @@ function applyPopupI18n() {
   textInput.placeholder = t('translateTextPlaceholder', uiLang);
   listenInputBtn.title = t('listen', uiLang);
   listenOutputBtn.title = t('listen', uiLang);
+  stopInputBtn.title = t('stop', uiLang);
+  stopOutputBtn.title = t('stop', uiLang);
   swapLangBtn.title = t('swapLanguages', uiLang);
   translateTextBtn.textContent = t('translateText', uiLang);
   copyTextBtn.textContent = t('copyText', uiLang);
@@ -80,15 +85,34 @@ function populateTextLanguages(target) {
   sourceLanguageSelect.value = 'auto';
 }
 
-// speechSynthesis: pick a system voice matching the language code.
+// Playback state: speechSynthesis for browser voices, an <audio> queue for
+// remote TTS engines. Audio is cached per engine+voice+text for this popup.
 let speakingBtn = null;
+let speakingStopBtn = null;
+let currentAudio = null;
+let speechStopped = false;
+let speechPaused = false;
+const audioCache = new Map();
+
 function stopSpeech() {
   window.speechSynthesis?.cancel();
+  speechStopped = true;
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
   if (speakingBtn) {
     speakingBtn.classList.remove('speaking');
     speakingBtn = null;
   }
+  if (speakingStopBtn) {
+    speakingStopBtn.hidden = true;
+    speakingStopBtn = null;
+  }
 }
+
+window.addEventListener('pagehide', stopSpeech);
+window.addEventListener('unload', stopSpeech);
 
 function getVoicesOnce() {
   const voices = window.speechSynthesis.getVoices();
@@ -107,32 +131,101 @@ function getVoicesOnce() {
   });
 }
 
-async function speak(text, langCode, btn) {
-  if (!('speechSynthesis' in window)) {
-    showStatus(t('noVoice', uiLang), 'error');
-    return;
-  }
-  if (btn === speakingBtn) {
-    stopSpeech();
-    return;
-  }
-  stopSpeech();
+async function speakWithBrowser(text, langCode, btn, stopBtn, cfg) {
   const voices = await getVoicesOnce();
   const code = langCode === 'auto' ? '' : (langCode ?? '').toLowerCase();
   const voice =
+    (cfg.voice && voices.find((v) => v.name === cfg.voice)) ??
     voices.find((v) => v.lang.toLowerCase().replace('_', '-').startsWith(code)) ??
     (code ? null : voices[0]);
   if (!voice) {
     showStatus(t('noVoice', uiLang), 'error');
     return;
   }
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = voice;
-  utterance.lang = voice.lang;
-  utterance.onend = utterance.onerror = () => stopSpeech();
-  btn.classList.add('speaking');
-  speakingBtn = btn;
-  window.speechSynthesis.speak(utterance);
+  for (const chunk of splitForSpeech(text, 300)) {
+    if (speechStopped) return;
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    utterance.rate = Math.min(4, Math.max(0.5, +cfg.rate || 1));
+    utterance.pitch = Math.min(2, Math.max(0, +cfg.pitch || 1));
+    utterance.onend = utterance.onerror = () => {
+      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+        // Only clear when the whole queue is drained.
+        setTimeout(() => {
+          if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) stopSpeech();
+        }, 50);
+      }
+    };
+    btn.classList.add('speaking');
+    speakingBtn = btn;
+    speakingStopBtn = stopBtn;
+    stopBtn.hidden = false;
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
+async function speakRemote(text, engine, btn, stopBtn, cfg, geminiKey) {
+  const voiceKey = `${engine}|${cfg.googleVoice}|${cfg.geminiModel}|${cfg.elevenlabsVoiceId}`;
+  for (const chunk of splitForSpeech(text)) {
+    if (speechStopped) return;
+    const cacheKey = `${voiceKey}|${chunk}`;
+    if (!audioCache.has(cacheKey)) {
+      audioCache.set(cacheKey, await fetchSpeech(engine, chunk, cfg, geminiKey));
+    }
+    const { audioBase64, mimeType } = audioCache.get(cacheKey);
+    if (speechStopped) return;
+    const audio = new Audio(`data:${mimeType};base64,${audioBase64}`);
+    audio.playbackRate = Math.min(4, Math.max(0.5, +cfg.rate || 1));
+    currentAudio = audio;
+    btn.classList.add('speaking');
+    speakingBtn = btn;
+    speakingStopBtn = stopBtn;
+    stopBtn.hidden = false;
+    await audio.play().catch(() => {});
+    await new Promise((resolve) => {
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      if (audio.ended) resolve();
+    });
+  }
+}
+
+async function speak(text, langCode, btn, stopBtn) {
+  // Click while playing/paused toggles pause and resume.
+  if (btn === speakingBtn) {
+    speechPaused = !speechPaused;
+    if (currentAudio) {
+      if (speechPaused) currentAudio.pause();
+      else await currentAudio.play().catch(() => {});
+    } else if ('speechSynthesis' in window) {
+      if (speechPaused) window.speechSynthesis.pause();
+      else window.speechSynthesis.resume();
+    }
+    btn.classList.toggle('speaking', !speechPaused);
+    return;
+  }
+  stopSpeech();
+  speechStopped = false;
+  speechPaused = false;
+
+  const settings = await getSettings();
+  const cfg = settings.speech;
+  const engine = cfg.engine === 'browser' && !('speechSynthesis' in window) ? null : cfg.engine;
+  if (!engine) {
+    showStatus(t('noVoice', uiLang), 'error');
+    return;
+  }
+  try {
+    if (engine === 'browser') {
+      await speakWithBrowser(text, langCode, btn, stopBtn, cfg);
+    } else {
+      await speakRemote(text, engine, btn, stopBtn, cfg, settings.providers?.google?.apiKey);
+    }
+  } catch (err) {
+    showStatus(err.message, 'error');
+  }
+  if (speakingBtn === btn && !speechPaused) stopSpeech();
 }
 
 function showStatus(message, type = 'info') {
@@ -142,7 +235,7 @@ function showStatus(message, type = 'info') {
 
 function populateProviders(selected) {
   providerSelect.innerHTML = Object.entries(PROVIDERS)
-    .map(([id, p]) => `<option value="${escapeHtml(id)}" ${id === selected ? 'selected' : ''}>${escapeHtml(p.label)}</option>`)
+    .map(([id, p]) => `<option value="${escapeHtml(id)}" ${id === selected ? 'selected' : ''}>${escapeHtml(p.label + (FREE_TIER_INFO[id] ? ` · ${t('freeTier', uiLang)}` : ''))}</option>`)
     .join('');
 }
 
@@ -266,13 +359,17 @@ async function init() {
 
   listenInputBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
-    if (text) speak(text, sourceLanguageSelect.value, listenInputBtn);
+    if (text) speak(text, sourceLanguageSelect.value, listenInputBtn, stopInputBtn);
   });
+
+  stopInputBtn.addEventListener('click', stopSpeech);
 
   listenOutputBtn.addEventListener('click', () => {
     const text = textOutput.textContent.trim();
-    if (text) speak(text, textTargetSelect.value, listenOutputBtn);
+    if (text) speak(text, textTargetSelect.value, listenOutputBtn, stopOutputBtn);
   });
+
+  stopOutputBtn.addEventListener('click', stopSpeech);
 
   copyTextBtn.addEventListener('click', async () => {
     try {

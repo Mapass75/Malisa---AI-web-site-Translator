@@ -4,7 +4,12 @@
   "short_name": "Malisa",
   "version": "1.0.0",
   "description": "Translate any web page with your own AI API keys. Supports OpenAI, Claude, Gemini, Groq, Ollama and more.",
-  "permissions": ["storage", "activeTab", "scripting", "contextMenus"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus"
+  ],
   "host_permissions": [
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",
@@ -16,6 +21,8 @@
     "https://api.x.ai/*",
     "https://libretranslate.com/*",
     "https://api.mymemory.translated.net/*",
+    "https://texttospeech.googleapis.com/*",
+    "https://api.elevenlabs.io/*",
     "https://translate.googleapis.com/*",
     "http://localhost:11434/*",
     "http://127.0.0.1:11434/*"
@@ -37,8 +44,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

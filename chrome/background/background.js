@@ -138,6 +138,7 @@ async function resolveProvider(settings, provider = settings.activeProvider) {
       apiKey: providerConfig.apiKey,
       model: providerConfig.model,
       baseUrl: providerConfig.baseUrl,
+      ...(provider === 'free' ? { email: providerConfig.email } : {}),
       ...(provider === 'ollama'
         ? {
             temperature: providerConfig.temperature,

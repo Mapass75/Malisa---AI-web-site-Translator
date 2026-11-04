@@ -39,6 +39,7 @@ export async function getSettings() {
     selectionTtsEngine: stored.selectionTtsEngine ?? DEFAULT_SETTINGS.selectionTtsEngine,
     selectionTtsVoice: stored.selectionTtsVoice ?? DEFAULT_SETTINGS.selectionTtsVoice,
     selectionTtsModel: stored.selectionTtsModel ?? DEFAULT_SETTINGS.selectionTtsModel,
+    speech: { ...DEFAULT_SETTINGS.speech, ...(stored.speech ?? {}) },
     providers,
   };
 }

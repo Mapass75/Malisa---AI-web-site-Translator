@@ -112,16 +112,92 @@ function estimateMaxTokens(blocks) {
   return Math.min(16384, Math.max(1024, Math.ceil(chars * 1.6) + 256));
 }
 
-const FREE_DEFAULT_URL = 'https://translate.googleapis.com/translate_a/single';
+const FREE_DEFAULT_URL = 'https://api.mymemory.translated.net/get';
 
-// Free no-key translation. Default endpoint is Google's public `gtx` API;
-// any LibreTranslate-compatible /translate URL can be configured instead.
+// Free no-key translation. Default endpoint is MyMemory; the public Google
+// `gtx` API and any LibreTranslate-compatible /translate URL also work.
 async function translateWithFree(opts) {
   const baseUrl = (opts.baseUrl || FREE_DEFAULT_URL).replace(/\/$/, '');
+  if (/mymemory/.test(baseUrl)) return translateWithMyMemory(baseUrl, opts);
   if (/translate_a\/single|translate\.googleapis/.test(baseUrl)) {
     return translateWithGtx(baseUrl, opts);
   }
   return translateWithLibreTranslate(baseUrl, opts);
+}
+
+// MyMemory caps queries at ~500 bytes; split long text at sentence/space
+// boundaries and concatenate the translations.
+function splitForMyMemory(text, maxBytes = 450) {
+  if (new TextEncoder().encode(text).length <= maxBytes) return [text];
+  const parts = [];
+  let chunk = '';
+  for (const piece of text.split(/(?<=[.!?;:\n])\s+|\n+/)) {
+    const candidate = chunk ? `${chunk} ${piece}` : piece;
+    if (new TextEncoder().encode(candidate).length > maxBytes && chunk) {
+      parts.push(chunk);
+      chunk = piece;
+    } else {
+      chunk = candidate;
+    }
+    while (new TextEncoder().encode(chunk).length > maxBytes) {
+      const cut = chunk.slice(0, maxBytes).lastIndexOf(' ');
+      parts.push(chunk.slice(0, cut > 50 ? cut : maxBytes));
+      chunk = chunk.slice(cut > 50 ? cut : maxBytes);
+    }
+  }
+  if (chunk) parts.push(chunk);
+  return parts;
+}
+
+async function myMemoryOne(baseUrl, text, targetLanguage, sourceLanguage, email) {
+  const src = sourceLanguage && sourceLanguage !== 'auto' ? sourceLanguage : null;
+  if (!src) {
+    throw new Error('MyMemory needs a source language — pick one instead of Auto-detect');
+  }
+  const url =
+    `${baseUrl}?q=${encodeURIComponent(text)}&langpair=${src}|${targetLanguage}` +
+    (email ? `&de=${encodeURIComponent(email)}` : '');
+  const response = await fetch(url);
+  if (response.status === 429 || response.status === 403) {
+    throw new Error(
+      'MyMemory daily limit reached — try again tomorrow or add your email in Settings for a higher quota'
+    );
+  }
+  if (!response.ok) throw new Error(`Free translate ${response.status}`);
+  const data = await response.json();
+  const translated = data?.responseData?.translatedText;
+  if (!translated || /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID EMAIL/i.test(translated)) {
+    throw new Error(
+      translated?.startsWith('MYMEMORY')
+        ? 'MyMemory daily limit reached — try again tomorrow or add your email in Settings for a higher quota'
+        : 'Free translate: unexpected response'
+    );
+  }
+  return translated;
+}
+
+async function translateWithMyMemory(baseUrl, opts) {
+  const email = opts.email?.trim();
+  const results = [];
+  for (const block of opts.blocks) {
+    const chunks = splitForMyMemory(block.text);
+    const translated = [];
+    for (const chunk of chunks) {
+      try {
+        translated.push(
+          await myMemoryOne(baseUrl, chunk, opts.targetLanguage, opts.sourceLanguage, email)
+        );
+      } catch (err) {
+        // One short retry for transient failures, then propagate.
+        await new Promise((r) => setTimeout(r, 800));
+        translated.push(
+          await myMemoryOne(baseUrl, chunk, opts.targetLanguage, opts.sourceLanguage, email)
+        );
+      }
+    }
+    results.push({ id: block.id, translated: translated.join(' ').trim() || block.text });
+  }
+  return results;
 }
 
 async function gtxOne(baseUrl, text, targetLanguage, sourceLanguage = 'auto') {
@@ -398,7 +474,9 @@ export async function translate(provider, opts) {
   if (config.type === 'anthropic') return translateWithAnthropic(opts);
   if (config.type === 'google') return translateWithGoogle(opts);
   if (config.type === 'ollama') return translateWithOllama(opts);
-  if (config.type === 'libretranslate') return translateWithFree(opts);
+  if (config.type === 'libretranslate' || config.type === 'mymemory') {
+    return translateWithFree(opts);
+  }
 
   const extraHeaders =
     provider === 'openrouter'

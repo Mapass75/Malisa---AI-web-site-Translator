@@ -1,11 +1,19 @@
 import browser from '../shared/browser.js';
 import { getSettings, saveSettings, hasPrivacyConsent, setPrivacyConsent } from '../shared/storage.js';
-import { LANGUAGES, PROVIDERS, PROVIDER_KEY_URLS, OLLAMA_DOWNLOAD_URL } from '../shared/types.js';
+import {
+  LANGUAGES,
+  PROVIDERS,
+  PROVIDER_KEY_URLS,
+  OLLAMA_DOWNLOAD_URL,
+  FREE_TIER_INFO,
+  FREE_TIER_CHECKED,
+  SPEECH_ENGINES,
+} from '../shared/types.js';
 import { getCachedModels } from '../shared/models.js';
 import { clearTranslationCache, countTranslationCacheEntries } from '../shared/cache.js';
 import { escapeHtml, validateOllamaBaseUrl, sanitizeApiKey, sanitizeHeaderValue } from '../shared/security.js';
 import { UI_LANGUAGES, t } from '../shared/i18n.js';
-import { OPENAI_TTS_MODELS, OPENAI_TTS_VOICES } from '../shared/tts.js';
+import { OPENAI_TTS_MODELS, OPENAI_TTS_VOICES, fetchSpeech, splitForSpeech } from '../shared/tts.js';
 
 const uiLanguage = document.getElementById('uiLanguage');
 const privacyCard = document.getElementById('privacyCard');
@@ -26,6 +34,19 @@ const selectionTtsEngine = document.getElementById('selectionTtsEngine');
 const selectionTtsVoice = document.getElementById('selectionTtsVoice');
 const selectionTtsModel = document.getElementById('selectionTtsModel');
 const selectionTtsOpenAiFields = document.getElementById('selectionTtsOpenAiFields');
+const speechEngine = document.getElementById('speechEngine');
+const speechVoice = document.getElementById('speechVoice');
+const speechRate = document.getElementById('speechRate');
+const speechPitch = document.getElementById('speechPitch');
+const speechEngineInfo = document.getElementById('speechEngineInfo');
+const speechEngineLink = document.getElementById('speechEngineLink');
+const speechGoogleKey = document.getElementById('speechGoogleKey');
+const speechGoogleVoice = document.getElementById('speechGoogleVoice');
+const speechGeminiModel = document.getElementById('speechGeminiModel');
+const speechElevenlabsKey = document.getElementById('speechElevenlabsKey');
+const speechElevenlabsVoiceId = document.getElementById('speechElevenlabsVoiceId');
+const speechTestBtn = document.getElementById('speechTestBtn');
+const speechTestStatus = document.getElementById('speechTestStatus');
 const providerSections = document.getElementById('providerSections');
 const refreshAllBtn = document.getElementById('refreshAllBtn');
 const refreshStatus = document.getElementById('refreshStatus');
@@ -62,6 +83,18 @@ function applyOptionsI18n() {
   document.getElementById('labelSelectionTtsVoice').textContent = t('selectionTtsVoice', lang);
   document.getElementById('labelSelectionTtsModel').textContent = t('selectionTtsModel', lang);
   document.getElementById('selectionTtsHint').textContent = t('selectionTtsHint', lang);
+  document.getElementById('speechTitle').textContent = t('speechTitle', lang);
+  document.getElementById('labelSpeechEngine').textContent = t('speechEngine', lang);
+  document.getElementById('labelSpeechVoice').textContent = t('speechVoice', lang);
+  document.getElementById('labelSpeechGoogleKey').textContent = t('speechGoogleKey', lang);
+  document.getElementById('labelSpeechVoiceName').textContent = t('speechVoiceName', lang);
+  document.getElementById('labelSpeechGeminiModel').textContent = t('speechGeminiModel', lang);
+  document.getElementById('speechGeminiHint').textContent = t('speechGeminiHint', lang);
+  document.getElementById('labelSpeechElevenlabsKey').textContent = t('speechElevenlabsKey', lang);
+  document.getElementById('labelSpeechElevenlabsVoice').textContent = t('speechElevenlabsVoice', lang);
+  document.getElementById('labelSpeechRate').textContent = t('speechRate', lang);
+  document.getElementById('labelSpeechPitch').textContent = t('speechPitch', lang);
+  speechTestBtn.textContent = t('speechTest', lang);
   document.getElementById('cacheTitle').textContent = t('cacheTitle', lang);
   document.getElementById('translationCacheLabel').textContent = t('translationCacheEnable', lang);
   document.getElementById('translationCacheHint').textContent = t('translationCacheHint', lang);
@@ -119,6 +152,91 @@ function populateTtsModels(selected) {
 
 function updateTtsOpenAiFieldsVisibility() {
   selectionTtsOpenAiFields.classList.toggle('hidden', selectionTtsEngine.value !== 'openai');
+}
+
+function populateSpeechEngines(selected) {
+  speechEngine.innerHTML = Object.entries(SPEECH_ENGINES)
+    .map(([id, e]) => `<option value="${id}" ${id === selected ? 'selected' : ''}>${escapeHtml(e.label)}</option>`)
+    .join('');
+}
+
+function populateSpeechVoices(selected) {
+  const voices = window.speechSynthesis?.getVoices() ?? [];
+  const code = (defaultLanguage.value ?? '').split('-')[0].toLowerCase();
+  const matching = voices.filter((v) => v.lang.toLowerCase().replace('_', '-').startsWith(code));
+  const list = matching.length ? matching : voices;
+  speechVoice.innerHTML =
+    `<option value="">${t('autoDetect', lang)}</option>` +
+    list
+      .map(
+        (v) =>
+          `<option value="${escapeHtml(v.name)}" ${v.name === selected ? 'selected' : ''}>${escapeHtml(v.name)} (${escapeHtml(v.lang)})</option>`
+      )
+      .join('');
+}
+
+function updateSpeechFields() {
+  const engine = speechEngine.value;
+  document.getElementById('speechBrowserFields').hidden = engine !== 'browser';
+  document.getElementById('speechGoogleFields').hidden = engine !== 'google';
+  document.getElementById('speechGeminiFields').hidden = engine !== 'gemini';
+  document.getElementById('speechElevenlabsFields').hidden = engine !== 'elevenlabs';
+  const meta = SPEECH_ENGINES[engine];
+  speechEngineInfo.textContent = `${meta.freeInfo} ${t('freeTierChecked', lang, { d: FREE_TIER_CHECKED })}`;
+  if (meta.keyUrl) {
+    speechEngineLink.hidden = false;
+    speechEngineLink.innerHTML = `${t('noApiKey', lang)} <a href="${meta.keyUrl}" target="_blank" rel="noopener noreferrer">${t('getKeyHere', lang)}</a>`;
+  } else {
+    speechEngineLink.hidden = true;
+  }
+}
+
+function collectSpeech() {
+  return {
+    engine: speechEngine.value,
+    voice: speechVoice.value,
+    rate: +speechRate.value || 1,
+    pitch: +speechPitch.value || 1,
+    googleKey: sanitizeApiKey(speechGoogleKey.value),
+    googleVoice: speechGoogleVoice.value.trim() || 'en-US-Standard-A',
+    geminiModel: speechGeminiModel.value.trim() || 'gemini-2.5-flash-preview-tts',
+    elevenlabsKey: sanitizeApiKey(speechElevenlabsKey.value),
+    elevenlabsVoiceId: speechElevenlabsVoiceId.value.trim(),
+  };
+}
+
+async function testSpeech() {
+  const cfg = collectSpeech();
+  speechTestStatus.textContent = t('speechPlaying', lang);
+  try {
+    const sample = 'This is a Malisa speech test.';
+    if (cfg.engine === 'browser') {
+      if (!('speechSynthesis' in window)) throw new Error(t('noVoice', lang));
+      const u = new SpeechSynthesisUtterance(sample);
+      const voice = window.speechSynthesis.getVoices().find((v) => v.name === cfg.voice);
+      if (voice) u.voice = voice;
+      u.rate = cfg.rate;
+      u.pitch = cfg.pitch;
+      u.onend = u.onerror = () => (speechTestStatus.textContent = '');
+      window.speechSynthesis.speak(u);
+    } else {
+      const s = await getSettings();
+      for (const chunk of splitForSpeech(sample)) {
+        const { audioBase64, mimeType } = await fetchSpeech(
+          cfg.engine,
+          chunk,
+          cfg,
+          s.providers?.google?.apiKey
+        );
+        const audio = new Audio(`data:${mimeType};base64,${audioBase64}`);
+        audio.playbackRate = cfg.rate;
+        await audio.play().catch(() => {});
+      }
+      speechTestStatus.textContent = '';
+    }
+  } catch (err) {
+    speechTestStatus.textContent = err.message;
+  }
 }
 
 function buildProviderSections() {
@@ -206,18 +324,31 @@ function buildProviderSections() {
         }
       </div>`;
 
+      const freeBadge = FREE_TIER_INFO[id]
+        ? `<span class="badge" title="${escapeHtml(FREE_TIER_INFO[id] + ' ' + t('freeTierChecked', lang, { d: FREE_TIER_CHECKED }))}">${t('freeTier', lang)}</span>`
+        : '';
+      const emailField =
+        id === 'free'
+          ? `<div class="field">
+            <label for="${id}Email">${t('freeEmailLabel', lang)}</label>
+            <input type="email" id="${id}Email" autocomplete="off" />
+          </div>`
+          : '';
+
       return `
     <section class="card" data-provider="${id}">
-      <h2>${p.label}</h2>
+      <h2>${p.label} ${freeBadge}</h2>
       ${baseUrlField}
       ${keyField}
       ${modelField}
+      ${emailField}
     </section>`;
     })
     .join('');
 
   for (const id of Object.keys(PROVIDERS)) {
     providerEls[id] = {
+      email: document.getElementById(`${id}Email`),
       key: document.getElementById(`${id}Key`),
       toggleKey: document.getElementById(`${id}ToggleKey`),
       clearKey: document.getElementById(`${id}ClearKey`),
@@ -387,6 +518,9 @@ function getProviderConfig(providerId) {
   if (providerEls[providerId].baseUrl) {
     config.baseUrl = providerEls[providerId].baseUrl.value.trim() || PROVIDERS[providerId].defaultBaseUrl;
   }
+  if (providerId === 'free') {
+    config.email = providerEls[providerId].email?.value?.trim() ?? '';
+  }
   if (providerId === 'ollama') {
     config.temperature = providerEls[providerId].temperature?.value;
     config.numCtx = providerEls[providerId].numCtx?.value;
@@ -478,6 +612,17 @@ async function loadSettings() {
   populateTtsVoices(settings.selectionTtsVoice ?? 'nova');
   populateTtsModels(settings.selectionTtsModel ?? 'tts-1');
   updateTtsOpenAiFieldsVisibility();
+  const speech = settings.speech ?? {};
+  populateSpeechEngines(speech.engine ?? 'browser');
+  speechGoogleKey.value = speech.googleKey ?? '';
+  speechGoogleVoice.value = speech.googleVoice ?? 'en-US-Standard-A';
+  speechGeminiModel.value = speech.geminiModel ?? 'gemini-2.5-flash-preview-tts';
+  speechElevenlabsKey.value = speech.elevenlabsKey ?? '';
+  speechElevenlabsVoiceId.value = speech.elevenlabsVoiceId ?? '';
+  speechRate.value = String(speech.rate ?? 1);
+  speechPitch.value = String(speech.pitch ?? 1);
+  populateSpeechVoices(speech.voice ?? '');
+  updateSpeechFields();
   setThemeSegmentButtons(settings.translatorTheme ?? 'system');
   await refreshCacheCount();
   for (const [id, config] of Object.entries(settings.providers)) {
@@ -540,6 +685,7 @@ function collectSettings() {
     selectionTtsEngine: selectionTtsEngine.value === 'openai' ? 'openai' : 'browser',
     selectionTtsVoice: selectionTtsVoice.value,
     selectionTtsModel: selectionTtsModel.value,
+    speech: collectSpeech(),
     providers,
   };
 }
@@ -607,6 +753,10 @@ clearCacheBtn.addEventListener('click', async () => {
 });
 
 selectionTtsEngine.addEventListener('change', updateTtsOpenAiFieldsVisibility);
+speechEngine.addEventListener('change', updateSpeechFields);
+defaultLanguage.addEventListener('change', () => populateSpeechVoices(speechVoice.value));
+speechTestBtn.addEventListener('click', testSpeech);
+window.speechSynthesis?.addEventListener('voiceschanged', () => populateSpeechVoices(speechVoice.value));
 
 themeSegmentButtons.forEach((btn) => {
   btn.addEventListener('click', () => setThemeSegmentButtons(btn.dataset.theme));

@@ -100,8 +100,8 @@ export const PROVIDERS = {
   },
   free: {
     label: 'Free translate (no key)',
-    defaultBaseUrl: 'https://translate.googleapis.com/translate_a/single',
-    type: 'libretranslate',
+    defaultBaseUrl: 'https://api.mymemory.translated.net/get',
+    type: 'mymemory',
     apiKeyOptional: true,
     noApiKey: true,
     noModel: true,
@@ -138,6 +138,40 @@ export const PROVIDER_KEY_URLS = {
 
 export const OLLAMA_DOWNLOAD_URL = 'https://ollama.com/download';
 
+// Free-tier notes shown as a "Free tier" badge. Values may change —
+// `checked` is the date they were last verified.
+export const FREE_TIER_INFO = {
+  groq: 'Free, no card. openai/gpt-oss-120b: 30 requests/min, 1,000/day, 8K tokens/min, 200K tokens/day.',
+  google:
+    'Free tier on several models, no card. Limits are shown in AI Studio. Free-tier content may be used by Google to improve its products, so avoid sensitive text.',
+  openrouter:
+    'Models with IDs ending in :free cost nothing. 20 requests/min, 50/day; 1,000/day after a one-time purchase of 10 credits. Pick a model ending in ":free".',
+  mistral: 'Free mode, no card. Limits are shown in your Mistral admin panel.',
+  free: 'No key. MyMemory: about 5,000 characters/day, 50,000/day if you enter an email.',
+  ollama: 'Free, runs on your computer.',
+};
+export const FREE_TIER_CHECKED = '2026-11-04';
+
+// Text-to-speech engines. 'openai' is kept for the selection-reader feature.
+export const SPEECH_ENGINES = {
+  browser: { label: 'Browser voices', freeInfo: 'Free, built into your browser.' },
+  google: {
+    label: 'Google Cloud TTS',
+    keyUrl: 'https://console.cloud.google.com/apis/library/texttospeech.googleapis.com',
+    freeInfo: 'Needs billing enabled; free monthly quota (about 4M characters for Standard voices).',
+  },
+  gemini: {
+    label: 'Gemini TTS',
+    freeInfo:
+      'Uses the Gemini API key. Free-tier content may be used by Google to improve its products, so avoid sensitive text.',
+  },
+  elevenlabs: {
+    label: 'ElevenLabs',
+    keyUrl: 'https://elevenlabs.io/app/settings/api-keys',
+    freeInfo: 'Free up to about 10,000 characters/month, attribution required, no commercial license.',
+  },
+};
+
 export const DEFAULT_SETTINGS = {
   defaultLanguage: 'en',
   uiLanguage: 'en',
@@ -162,6 +196,17 @@ export const DEFAULT_SETTINGS = {
   selectionTtsEngine: 'browser',
   selectionTtsVoice: 'nova',
   selectionTtsModel: 'tts-1',
+  speech: {
+    engine: 'browser',
+    voice: '',
+    rate: 1,
+    pitch: 1,
+    googleKey: '',
+    googleVoice: 'en-US-Standard-A',
+    geminiModel: 'gemini-2.5-flash-preview-tts',
+    elevenlabsKey: '',
+    elevenlabsVoiceId: '',
+  },
 };
 
 export const LANGUAGES = [
