@@ -16,6 +16,7 @@ Malisa sends data only when you start an action. It goes directly from your brow
 | Text of the current web page (visible text, text added later, `alt`, `title`, `placeholder`, `aria-label`, button labels) | Selected translation provider | When you click **Translate page** in the popup or **Translate page with Malisa** in the right-click menu. While a page stays translated, new text that loads on it is also sent. **Restore original** stops this. |
 | Selected text | Selected translation provider | When you use **Translate with Malisa** on a selection or the selection popup |
 | Text typed in the popup text box | Selected translation provider | When you click Translate in the text box |
+| Text typed in the popup text box (Edit text / Summarize modes) | Selected AI provider (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter or your Ollama server) | Only when you click **Edit text** or **Summarize**. Page content is never read for these modes. |
 | Text to read aloud (original or translation) | Selected speech provider | When you click Listen or Speak. With **Browser voices**, the text stays in your browser and operating system. |
 | API key / access keys | Only to the provider that the key belongs to, in the request header or signature | With every request to that provider |
 | Model list request | Selected translation provider | When you open Settings or refresh models |

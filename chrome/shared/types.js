@@ -290,6 +290,13 @@ export const PROVIDER_LABELS = Object.fromEntries(
   Object.entries(PROVIDERS).map(([id, p]) => [id, p.label])
 );
 
+const TEXT_TASK_TYPES = new Set(['openai', 'anthropic', 'google', 'ollama']);
+
+/** Providers that can run free-form prompts (edit / summarize), i.e. LLM chat APIs. */
+export function supportsTextTasks(providerId) {
+  return TEXT_TASK_TYPES.has(PROVIDERS[providerId]?.type);
+}
+
 export function isProviderReady(providerId, config) {
   const meta = PROVIDERS[providerId];
   if (!meta || !config) return false;

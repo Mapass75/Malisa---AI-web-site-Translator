@@ -1,6 +1,6 @@
 {
   "name": "malisa",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "private": true,
   "type": "module",
   "description": "Malisa - AI web site Translator (Chrome & Firefox)",
@@ -12,6 +12,7 @@
     "lint:firefox": "web-ext lint --source-dir dist/firefox",
     "lint:chrome": "web-ext lint --source-dir dist/chrome",
     "test:security": "node --test tests/security/",
+    "test:popup": "node --test tests/popup/",
     "run:firefox": "web-ext run --source-dir dist/firefox --firefox=firefox"
   },
   "devDependencies": {

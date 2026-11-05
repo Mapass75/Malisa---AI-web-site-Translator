@@ -2,10 +2,10 @@ import browser from '../shared/browser.js';
 import { getSettings, hasPrivacyConsent } from '../shared/storage.js';
 import { getCachedTranslations, cacheTranslations } from '../shared/cache.js';
 import { dedupeBlocks } from '../shared/dedupe.js';
-import { translate } from '../shared/providers.js';
+import { translate, processText, TEXT_TASKS, SUMMARY_LENGTHS } from '../shared/providers.js';
 import { chunkBlocks, runConcurrent } from '../shared/batcher.js';
 import { fetchModels, refreshAllModels } from '../shared/models.js';
-import { PROVIDERS, getProviderLimits, isProviderReady } from '../shared/types.js';
+import { PROVIDERS, getProviderLimits, isProviderReady, supportsTextTasks } from '../shared/types.js';
 import { getUiLanguage, t } from '../shared/i18n.js';
 import {
   assertTrustedSender,
@@ -417,6 +417,38 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
         message.sourceLanguage
       )
         .then((translated) => sendResponse({ ok: true, translated }))
+        .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
+    } catch (err) {
+      sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) });
+    }
+    return true;
+  }
+
+  if (message.type === 'PROCESS_TEXT') {
+    try {
+      const text = validatePopupText(message.text);
+      if (!TEXT_TASKS.includes(message.task)) throw new Error('Invalid text task');
+      if (message.task === 'summarize' && !isValidLanguage(message.targetLanguage)) {
+        throw new Error('Invalid target language');
+      }
+      const length = SUMMARY_LENGTHS.includes(message.length) ? message.length : 'medium';
+      if (!isValidProvider(message.provider)) throw new Error('Invalid AI provider');
+      if (!supportsTextTasks(message.provider)) {
+        sendResponse({ ok: false, code: 'unsupported', error: 'Provider does not support this action' });
+        return false;
+      }
+      getCachedSettings()
+        .then((settings) => resolveProvider(settings, message.provider))
+        .then(({ provider, translateOpts }) =>
+          processText(provider, {
+            ...translateOpts,
+            task: message.task,
+            text,
+            targetLanguage: message.targetLanguage,
+            length,
+          })
+        )
+        .then((result) => sendResponse({ ok: true, result }))
         .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
     } catch (err) {
       sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) });
