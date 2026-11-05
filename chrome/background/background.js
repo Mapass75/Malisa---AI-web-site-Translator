@@ -1,5 +1,5 @@
 import browser from '../shared/browser.js';
-import { getSettings } from '../shared/storage.js';
+import { getSettings, hasPrivacyConsent } from '../shared/storage.js';
 import { getCachedTranslations, cacheTranslations } from '../shared/cache.js';
 import { dedupeBlocks } from '../shared/dedupe.js';
 import { translate } from '../shared/providers.js';
@@ -133,7 +133,24 @@ async function translateBatchWithRetry(provider, translateOpts, batch, retried =
   }
 }
 
+function isDomainSkipped(url, skipDomains) {
+  if (!Array.isArray(skipDomains) || !skipDomains.length) return false;
+  let host = '';
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return skipDomains.some((d) => {
+    const dom = String(d).trim().toLowerCase();
+    return dom && (host === dom || host.endsWith('.' + dom));
+  });
+}
+
 async function resolveProvider(settings, provider = settings.activeProvider) {
+  if (!(await hasPrivacyConsent())) {
+    throw new Error('Privacy consent required. Open Settings to continue.');
+  }
   if (!isValidProvider(provider)) {
     throw new Error('Invalid AI provider');
   }
@@ -246,6 +263,8 @@ async function translateAllBlocks(blocks, targetLanguage, tabId, frameId) {
 
   const safeBlocks = validateBlocks(blocks);
   const settings = await getCachedSettings();
+  const tab = await browser.tabs.get(tabId).catch(() => null);
+  if (tab?.url && isDomainSkipped(tab.url, settings.skipDomains)) return;
   const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings);
 
   const limits = getProviderLimits(provider, settings);

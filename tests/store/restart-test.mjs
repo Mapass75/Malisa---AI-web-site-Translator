@@ -6,8 +6,8 @@ const sw=ctx.serviceWorkers()[0]??await ctx.waitForEvent('serviceworker',{timeou
 const p=await ctx.newPage();
 await p.goto('http://127.0.0.1:8742/');
 await p.waitForTimeout(800);
-if(run===1){
-  await sw.evaluate(()=>chrome.storage.local.set({settings:{activeProvider:'free',defaultLanguage:'hr',uiLanguage:'hr',providers:{},speech:{engine:'browser'}},privacy_consent_v1:true}));
+if(process.env.SEED!=='0'){
+  await sw.evaluate((skip)=>chrome.storage.local.set({settings:{activeProvider:'free',defaultLanguage:'hr',uiLanguage:'hr',skipDomains:skip?['127.0.0.1']:[],providers:{},speech:{engine:'browser'}},privacy_consent_v1:true}),process.env.SEED_SKIP==='1');
   await p.reload(); await p.waitForTimeout(500);
 }
 console.log('READY run'+run);

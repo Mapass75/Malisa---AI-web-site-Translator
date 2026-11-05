@@ -41,3 +41,17 @@ Scope: the extension source in `chrome/` (shared by the Chrome/Edge and Firefox 
 - Firefox runtime: no Firefox binary on the test machine. Only `web-ext lint` was run on the Firefox build.
 - Snyk and SonarQube: not configured, see the table.
 - Real calls with valid provider keys: none were available. Error paths were tested earlier with invalid keys.
+
+## Devin Security scan (scan-490e5ffc016242a4a45ea354fb564d91, deep effort, 2026-11-04)
+
+7 findings, triaged:
+
+| Finding | Verdict | Action |
+|---|---|---|
+| Saved model name HTML injection in Settings | confirmed (low) | fixed in 2.5.6 (escapeHtml) + regression test |
+| Privacy consent + "Skip domains" stored but never enforced | confirmed (low) | fixed in 2.6.1: `hasPrivacyConsent()` checked in `resolveProvider` (all translation paths); `isDomainSkipped()` checked per tab URL in `translateAllBlocks` |
+| Content script loads all saved API keys; background trusts content scripts | accepted (low) | `assertTrustedSender` already gates messages; content script only reads `settings` for UI language/theme/speech — keys never sent to pages. No change. |
+| Cache-key poisoning via forged page text (2x) | accepted (medium) | provider output is keyed by exact source text; poison requires an attacker-controlled page + affects display only. Dismissed/accepted. |
+| Unbounded API spend via iframes/MutationObserver (2x) | accepted (medium) | translation is user-triggered; observer reuses cache and user-set batch limits. Dismissed/accepted. |
+
+Verification: `isDomainSkipped` unit cases all pass; end-to-end check on Chrome 2.6.1 — menu item on a skipped domain leaves the page untranslated (dbg marker `hit:true`).
