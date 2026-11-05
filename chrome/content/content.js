@@ -24,6 +24,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Close',
       selectionSpeak: 'Read aloud',
       selectionTtsError: 'Speech failed: ',
+      selectionSummarize: "Summarize this",
+      selectionExplain: "Explain this",
+      selectionSummary: "Summary",
+      selectionExplanation: "Explanation",
+      selectionSummarizing: "Summarizing...",
+      selectionExplaining: "Explaining...",
+      selectionCopy: "Copy",
+      selectionCopied: "Copied ✓",
+      selectionCopyFailed: "Copy failed",
+      selectionNoText: "No text is selected. Select some text on the page first.",
+      selectionActionUnsupported: "{provider} cannot summarize or explain text. In Settings, choose an AI provider (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter or Ollama) and save it.",
+      selectionActionFailed: "Action failed",
     },
     hr: {
       collectingText: 'Prikupljam tekst...',
@@ -41,6 +53,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Zatvori',
       selectionSpeak: 'Pročitaj naglas',
       selectionTtsError: 'Govor nije uspio: ',
+      selectionSummarize: "Sažmi ovo",
+      selectionExplain: "Objasni ovo",
+      selectionSummary: "Sažetak",
+      selectionExplanation: "Objašnjenje",
+      selectionSummarizing: "Sažimam...",
+      selectionExplaining: "Objašnjavam...",
+      selectionCopy: "Kopiraj",
+      selectionCopied: "Kopirano ✓",
+      selectionCopyFailed: "Kopiranje nije uspjelo",
+      selectionNoText: "Nema označenog teksta. Najprije označi tekst na stranici.",
+      selectionActionUnsupported: "{provider} ne može sažimati ni objašnjavati tekst. U postavkama odaberi AI pružatelja (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter ili Ollama) i spremi.",
+      selectionActionFailed: "Radnja nije uspjela",
     },
     sr: {
       collectingText: 'Prikupljam tekst...',
@@ -58,6 +82,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Zatvori',
       selectionSpeak: 'Pročitaj naglas',
       selectionTtsError: 'Govor nije uspio: ',
+      selectionSummarize: "Sažmi ovo",
+      selectionExplain: "Objasni ovo",
+      selectionSummary: "Sažetak",
+      selectionExplanation: "Objašnjenje",
+      selectionSummarizing: "Sažimam...",
+      selectionExplaining: "Objašnjavam...",
+      selectionCopy: "Kopiraj",
+      selectionCopied: "Kopirano ✓",
+      selectionCopyFailed: "Kopiranje nije uspelo",
+      selectionNoText: "Nema označenog teksta. Prvo označi tekst na stranici.",
+      selectionActionUnsupported: "{provider} ne može da sažima ni objašnjava tekst. U podešavanjima izaberi AI provajdera (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter ili Ollama) i sačuvaj.",
+      selectionActionFailed: "Radnja nije uspela",
     },
     de: {
       collectingText: 'Text wird gesammelt...',
@@ -75,6 +111,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Schließen',
       selectionSpeak: 'Vorlesen',
       selectionTtsError: 'Sprachausgabe fehlgeschlagen: ',
+      selectionSummarize: "Zusammenfassen",
+      selectionExplain: "Erklären",
+      selectionSummary: "Zusammenfassung",
+      selectionExplanation: "Erklärung",
+      selectionSummarizing: "Fasse zusammen...",
+      selectionExplaining: "Erkläre...",
+      selectionCopy: "Kopieren",
+      selectionCopied: "Kopiert ✓",
+      selectionCopyFailed: "Kopieren fehlgeschlagen",
+      selectionNoText: "Kein Text markiert. Markiere zuerst Text auf der Seite.",
+      selectionActionUnsupported: "{provider} kann Text nicht zusammenfassen oder erklären. Wähle in den Einstellungen einen KI-Anbieter (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter oder Ollama) und speichere.",
+      selectionActionFailed: "Aktion fehlgeschlagen",
     },
     it: {
       collectingText: 'Raccolta testo...',
@@ -92,6 +140,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Chiudi',
       selectionSpeak: 'Leggi ad alta voce',
       selectionTtsError: 'Lettura vocale non riuscita: ',
+      selectionSummarize: "Riassumi",
+      selectionExplain: "Spiega",
+      selectionSummary: "Riassunto",
+      selectionExplanation: "Spiegazione",
+      selectionSummarizing: "Riassunto in corso...",
+      selectionExplaining: "Spiegazione in corso...",
+      selectionCopy: "Copia",
+      selectionCopied: "Copiato ✓",
+      selectionCopyFailed: "Copia non riuscita",
+      selectionNoText: "Nessun testo selezionato. Seleziona prima del testo nella pagina.",
+      selectionActionUnsupported: "{provider} non può riassumere o spiegare testo. Nelle impostazioni scegli un provider IA (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter o Ollama) e salva.",
+      selectionActionFailed: "Azione non riuscita",
     },
     fr: {
       collectingText: 'Collecte du texte...',
@@ -109,6 +169,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Fermer',
       selectionSpeak: 'Lire à voix haute',
       selectionTtsError: 'Échec de la lecture : ',
+      selectionSummarize: "Résumer",
+      selectionExplain: "Expliquer",
+      selectionSummary: "Résumé",
+      selectionExplanation: "Explication",
+      selectionSummarizing: "Résumé...",
+      selectionExplaining: "Explication...",
+      selectionCopy: "Copier",
+      selectionCopied: "Copié ✓",
+      selectionCopyFailed: "Échec de la copie",
+      selectionNoText: "Aucun texte sélectionné. Sélectionnez d'abord du texte sur la page.",
+      selectionActionUnsupported: "{provider} ne peut pas résumer ni expliquer du texte. Dans les paramètres, choisissez un fournisseur IA (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter ou Ollama) et enregistrez.",
+      selectionActionFailed: "L'action a échoué",
     },
     es: {
       collectingText: 'Recopilando texto...',
@@ -126,6 +198,18 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       selectionClose: 'Cerrar',
       selectionSpeak: 'Leer en voz alta',
       selectionTtsError: 'Error de voz: ',
+      selectionSummarize: "Resumir",
+      selectionExplain: "Explicar",
+      selectionSummary: "Resumen",
+      selectionExplanation: "Explicación",
+      selectionSummarizing: "Resumiendo...",
+      selectionExplaining: "Explicando...",
+      selectionCopy: "Copiar",
+      selectionCopied: "Copiado ✓",
+      selectionCopyFailed: "Error al copiar",
+      selectionNoText: "No hay texto seleccionado. Selecciona primero texto en la página.",
+      selectionActionUnsupported: "{provider} no puede resumir ni explicar texto. En Ajustes, elige un proveedor de IA (OpenAI, Anthropic, Gemini, Grok, DeepSeek, Mistral, Groq, OpenRouter u Ollama) y guarda.",
+      selectionActionFailed: "La acción falló",
     },
   };
 
@@ -726,6 +810,138 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
     return row;
   }
 
+  const SELECTION_ACTIONS = {
+    summarize: { button: 'selectionSummarize', label: 'selectionSummary', busy: 'selectionSummarizing' },
+    explain: { button: 'selectionExplain', label: 'selectionExplanation', busy: 'selectionExplaining' },
+  };
+  let selectionActionToken = 0;
+
+  function requestSelectionAction(task, text) {
+    return new Promise((resolve, reject) => {
+      browser.runtime.sendMessage({ type: 'SELECTION_ACTION', task, text }, (response) => {
+        if (browser.runtime.lastError) {
+          reject(new Error(browser.runtime.lastError.message));
+          return;
+        }
+        resolve(response ?? { ok: false });
+      });
+    });
+  }
+
+  async function copySelectionResult(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.setAttribute('readonly', '');
+      area.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0;';
+      document.body.appendChild(area);
+      area.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      area.remove();
+      return ok;
+    }
+  }
+
+  function selectionActionError(message) {
+    const err = document.createElement('div');
+    err.className = 'malisa-sel-error';
+    err.textContent = message;
+    return err;
+  }
+
+  async function runSelectionAction(task, original, buttons, result) {
+    const cfg = SELECTION_ACTIONS[task];
+    const token = ++selectionActionToken;
+    result.hidden = false;
+    result.replaceChildren();
+    if (!original?.trim()) {
+      result.appendChild(selectionActionError(t('selectionNoText', uiLang)));
+      return;
+    }
+    buttons.forEach((b) => (b.disabled = true));
+    const loading = document.createElement('div');
+    loading.className = 'malisa-sel-loading';
+    const spinner = document.createElement('span');
+    spinner.className = 'malisa-sel-spinner';
+    const label = document.createElement('span');
+    label.textContent = t(cfg.busy, uiLang);
+    loading.append(spinner, label);
+    result.appendChild(loading);
+
+    let response;
+    try {
+      response = await requestSelectionAction(task, original);
+    } catch (err) {
+      response = { ok: false, error: err.message };
+    }
+    if (token !== selectionActionToken || !result.isConnected) return;
+    buttons.forEach((b) => (b.disabled = false));
+    result.replaceChildren();
+    if (!response.ok) {
+      result.appendChild(
+        selectionActionError(
+          response.code === 'unsupported'
+            ? t('selectionActionUnsupported', uiLang, { provider: response.provider ?? '' })
+            : t('errorPrefix', uiLang) + (response.error || t('selectionActionFailed', uiLang))
+        )
+      );
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'malisa-sel-label-row';
+    const heading = document.createElement('span');
+    heading.className = 'malisa-sel-label';
+    heading.textContent = t(cfg.label, uiLang);
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'malisa-sel-copy';
+    copy.textContent = t('selectionCopy', uiLang);
+    copy.addEventListener('click', async () => {
+      const ok = await copySelectionResult(response.result);
+      copy.textContent = t(ok ? 'selectionCopied' : 'selectionCopyFailed', uiLang);
+      setTimeout(() => {
+        copy.textContent = t('selectionCopy', uiLang);
+      }, 1500);
+    });
+    row.append(heading, copy);
+    const text = document.createElement('div');
+    text.className = 'malisa-sel-text malisa-sel-action-text';
+    text.textContent = response.result;
+    result.append(row, text);
+  }
+
+  function createSelectionActions(original) {
+    const wrap = document.createElement('div');
+    wrap.className = 'malisa-sel-actions-wrap';
+    const row = document.createElement('div');
+    row.className = 'malisa-sel-actions';
+    const result = document.createElement('div');
+    result.className = 'malisa-sel-action-result';
+    result.hidden = true;
+    const buttons = Object.entries(SELECTION_ACTIONS).map(([task, cfg]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'malisa-sel-action';
+      btn.dataset.task = task;
+      btn.textContent = t(cfg.button, uiLang);
+      return btn;
+    });
+    buttons.forEach((btn) =>
+      btn.addEventListener('click', () => runSelectionAction(btn.dataset.task, original, buttons, result))
+    );
+    row.append(...buttons);
+    wrap.append(row, result);
+    return wrap;
+  }
+
   function onSelectionPopupKeydown(e) {
     if (e.key === 'Escape') removeSelectionPopup();
   }
@@ -894,6 +1110,20 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
         animation: malisa-sel-spin 0.7s linear infinite;
       }
       @keyframes malisa-sel-spin { to { transform: rotate(360deg); } }
+      .malisa-sel-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+      .malisa-sel-action, .malisa-sel-copy {
+        font: inherit; font-size: 12px; font-weight: 600; line-height: 1.2;
+        padding: 7px 12px; border-radius: 10px; cursor: pointer;
+        border: 1px solid rgba(108, 99, 255, 0.45);
+        background: rgba(108, 99, 255, 0.12); color: #5b52e6;
+      }
+      .malisa-sel-copy { padding: 4px 10px; font-size: 11px; }
+      #malisa-selection-popup[data-theme="dark"] .malisa-sel-action,
+      #malisa-selection-popup[data-theme="dark"] .malisa-sel-copy { color: #c4c0ff; }
+      .malisa-sel-action:hover, .malisa-sel-copy:hover { background: rgba(108, 99, 255, 0.24); }
+      .malisa-sel-action:disabled { opacity: 0.55; cursor: wait; }
+      .malisa-sel-action-result { margin-top: 14px; }
+      .malisa-sel-action-result[hidden] { display: none; }
       .malisa-sel-error {
         color: #ff6b6b; font-size: 14px;
         padding: 10px 12px; border-radius: 12px;
@@ -990,6 +1220,7 @@ if (globalThis.__MALISA_CONTENT_INIT__) {
       transText.textContent = translated;
 
       body.append(origHeader, origText, transHeader, transText);
+      body.appendChild(createSelectionActions(original));
     }
 
     panel.append(header, body);

@@ -328,6 +328,30 @@ async function translateSelection(text, tabId) {
   });
 }
 
+const SELECTION_TASKS = ['summarize', 'explain'];
+
+// "Summarize this" / "Explain this" in the selection popup: only the selected text is sent,
+// always with the saved provider (never switched silently).
+async function runSelectionAction(task, text) {
+  if (!SELECTION_TASKS.includes(task)) throw new Error('Invalid action');
+  const trimmed = validateSelectionText(text);
+  const settings = await getCachedSettings();
+  const providerId = settings.activeProvider;
+  if (!supportsTextTasks(providerId)) {
+    return { ok: false, code: 'unsupported', provider: PROVIDERS[providerId]?.label ?? String(providerId) };
+  }
+  const targetLanguage = isValidLanguage(settings.defaultLanguage) ? settings.defaultLanguage : 'en';
+  const { provider, translateOpts } = await resolveProvider(settings, providerId);
+  const result = await processText(provider, {
+    ...translateOpts,
+    task,
+    text: trimmed,
+    targetLanguage,
+    length: 'medium',
+  });
+  return { ok: true, result, targetLanguage };
+}
+
 function showTabNotice(tabId, text) {
   browser.action.setBadgeText({ tabId, text: text ? '!' : '' }).catch(() => {});
   if (text) browser.action.setBadgeBackgroundColor({ tabId, color: '#d93025' }).catch(() => {});
@@ -424,11 +448,18 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
     return true;
   }
 
+  if (message.type === 'SELECTION_ACTION') {
+    runSelectionAction(message.task, message.text)
+      .then((response) => sendResponse(response))
+      .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
+    return true;
+  }
+
   if (message.type === 'PROCESS_TEXT') {
     try {
       const text = validatePopupText(message.text);
       if (!TEXT_TASKS.includes(message.task)) throw new Error('Invalid text task');
-      if (message.task === 'summarize' && !isValidLanguage(message.targetLanguage)) {
+      if (message.task !== 'edit' && !isValidLanguage(message.targetLanguage)) {
         throw new Error('Invalid target language');
       }
       const length = SUMMARY_LENGTHS.includes(message.length) ? message.length : 'medium';

@@ -541,7 +541,7 @@ export async function translate(provider, opts) {
   );
 }
 
-export const TEXT_TASKS = ['edit', 'summarize'];
+export const TEXT_TASKS = ['edit', 'summarize', 'explain'];
 export const SUMMARY_LENGTHS = ['short', 'medium', 'detailed'];
 
 const SUMMARY_STYLE = {
@@ -562,6 +562,14 @@ function textTaskPrompt(task, targetLanguage, length) {
       guard
     );
   }
+  if (task === 'explain') {
+    return (
+      `Explain what the text means in simple, plain language that anyone can understand. ` +
+      `Clarify difficult words, references and context briefly. Write the explanation in ${targetLabel(targetLanguage)}. ` +
+      'Do not invent facts that are not supported by the text. ' +
+      guard
+    );
+  }
   return (
     `Summarize the text as ${SUMMARY_STYLE[length] ?? SUMMARY_STYLE.medium}. ` +
     `Write the summary in ${targetLabel(targetLanguage)}. Do not add information that is not in the text. ` +
@@ -571,6 +579,7 @@ function textTaskPrompt(task, targetLanguage, length) {
 
 function textTaskMaxTokens(task, text, length) {
   if (task === 'edit') return Math.min(16384, Math.max(512, Math.ceil(text.length * 1.6) + 256));
+  if (task === 'explain') return 900;
   return { short: 300, medium: 700, detailed: 2000 }[length] ?? 700;
 }
 
