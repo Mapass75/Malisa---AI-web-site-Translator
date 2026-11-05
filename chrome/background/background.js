@@ -67,6 +67,10 @@ browser.runtime.onStartup.addListener(() => {
   setupContextMenu().catch(() => {});
   getCachedSettings();
 });
+
+// MV3: onStartup does not always wake the service worker, so also (re)create the
+// menus on every worker start — removeAll keeps this idempotent.
+setupContextMenu().catch(() => {});
 function notifyTab(tabId, message, frameId) {
   if (!tabId) return;
   browser.tabs
