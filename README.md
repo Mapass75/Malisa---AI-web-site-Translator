@@ -6,6 +6,7 @@ Malisa is a free, open-source browser extension (Chrome, Edge, Firefox) that tra
 
 ### Translation
 - Translate page / Restore original
+- Right-click the page → **Translate page with Malisa** (same as the popup Translate page button, uses the saved provider, model and target language)
 - "Translate text" box in the popup: source language (auto-detect) + target language, swap button, Copy button
 - Default target language is English on first install
 - Selection translate: right-click highlighted text → floating popup

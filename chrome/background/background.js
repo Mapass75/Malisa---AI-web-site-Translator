@@ -1,11 +1,11 @@
 import browser from '../shared/browser.js';
-import { getSettings } from '../shared/storage.js';
+import { getSettings, hasPrivacyConsent } from '../shared/storage.js';
 import { getCachedTranslations, cacheTranslations } from '../shared/cache.js';
 import { dedupeBlocks } from '../shared/dedupe.js';
 import { translate } from '../shared/providers.js';
 import { chunkBlocks, runConcurrent } from '../shared/batcher.js';
 import { fetchModels, refreshAllModels } from '../shared/models.js';
-import { getProviderLimits, isProviderReady } from '../shared/types.js';
+import { PROVIDERS, getProviderLimits, isProviderReady } from '../shared/types.js';
 import { getUiLanguage, t } from '../shared/i18n.js';
 import {
   assertTrustedSender,
@@ -20,6 +20,7 @@ import {
 import { fetchSpeech } from '../shared/tts.js';
 
 const CONTEXT_MENU_ID = 'malisa-translate-selection';
+const PAGE_MENU_ID = 'malisa-translate-page';
 let settingsCache = null;
 let settingsCacheTime = 0;
 const SETTINGS_TTL = 60000;
@@ -50,6 +51,11 @@ async function setupContextMenu() {
     title: t('contextMenuTranslate', lang),
     contexts: ['selection'],
   });
+  browser.contextMenus.create({
+    id: PAGE_MENU_ID,
+    title: t('contextMenuTranslatePage', lang),
+    contexts: ['page'],
+  });
 }
 
 browser.runtime.onInstalled.addListener(() => {
@@ -61,6 +67,10 @@ browser.runtime.onStartup.addListener(() => {
   setupContextMenu().catch(() => {});
   getCachedSettings();
 });
+
+// MV3: onStartup does not always wake the service worker, so also (re)create the
+// menus on every worker start — removeAll keeps this idempotent.
+setupContextMenu().catch(() => {});
 function notifyTab(tabId, message, frameId) {
   if (!tabId) return;
   browser.tabs
@@ -123,7 +133,24 @@ async function translateBatchWithRetry(provider, translateOpts, batch, retried =
   }
 }
 
+function isDomainSkipped(url, skipDomains) {
+  if (!Array.isArray(skipDomains) || !skipDomains.length) return false;
+  let host = '';
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return skipDomains.some((d) => {
+    const dom = String(d).trim().toLowerCase();
+    return dom && (host === dom || host.endsWith('.' + dom));
+  });
+}
+
 async function resolveProvider(settings, provider = settings.activeProvider) {
+  if (!(await hasPrivacyConsent())) {
+    throw new Error('Privacy consent required. Open Settings to continue.');
+  }
   if (!isValidProvider(provider)) {
     throw new Error('Invalid AI provider');
   }
@@ -236,6 +263,8 @@ async function translateAllBlocks(blocks, targetLanguage, tabId, frameId) {
 
   const safeBlocks = validateBlocks(blocks);
   const settings = await getCachedSettings();
+  const tab = await browser.tabs.get(tabId).catch(() => null);
+  if (tab?.url && isDomainSkipped(tab.url, settings.skipDomains)) return;
   const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings);
 
   const limits = getProviderLimits(provider, settings);
@@ -299,7 +328,45 @@ async function translateSelection(text, tabId) {
   });
 }
 
+function showTabNotice(tabId, text) {
+  browser.action.setBadgeText({ tabId, text: text ? '!' : '' }).catch(() => {});
+  if (text) browser.action.setBadgeBackgroundColor({ tabId, color: '#d93025' }).catch(() => {});
+  browser.action.setTitle({ tabId, title: text || '' }).catch(() => {});
+}
+
+// Same flow as the popup's "Translate page" button, using the saved provider and target language.
+async function translatePageFromMenu(tabId) {
+  showTabNotice(tabId, '');
+  const [settings, lang] = await Promise.all([getSettings(), getUiLanguage()]);
+  const provider = settings.activeProvider;
+  const targetLanguage = settings.defaultLanguage;
+  let setupError = '';
+  if (!isProviderReady(provider, settings.providers?.[provider])) {
+    setupError = PROVIDERS[provider]?.apiKeyOptional
+      ? t('setProviderUrl', lang)
+      : t('enterApiKey', lang, { provider: PROVIDERS[provider]?.label ?? provider });
+  } else if (!isValidLanguage(targetLanguage)) {
+    setupError = 'Invalid target language';
+  }
+  if (setupError) {
+    await notifyTabEnsured(tabId, { type: 'SELECTION_ERROR', error: setupError }).catch(() =>
+      showTabNotice(tabId, setupError)
+    );
+    browser.runtime.openOptionsPage().catch(() => {});
+    return;
+  }
+  try {
+    await notifyTabEnsured(tabId, { type: 'TRANSLATE_PAGE', targetLanguage });
+  } catch {
+    showTabNotice(tabId, t('contextMenuPageUnavailable', lang));
+  }
+}
+
 browser.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === PAGE_MENU_ID) {
+    if (tab?.id) translatePageFromMenu(tab.id).catch(() => {});
+    return;
+  }
   if (info.menuItemId !== CONTEXT_MENU_ID || !tab?.id) return;
   const text = info.selectionText?.trim();
   if (!text) return;

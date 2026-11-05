@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const extDir='/tmp/malisa-chrome-pkg';
+const ctx=await chromium.launchPersistentContext('/tmp/malisa-menureal',{executablePath:'/home/ubuntu/.local/bin/google-chrome',headless:false,args:[`--disable-extensions-except=${extDir}`,`--load-extension=${extDir}`,'--start-maximized']});
+const sw=ctx.serviceWorkers()[0]??await ctx.waitForEvent('serviceworker');
+await sw.evaluate(async()=>{await chrome.storage.local.set({settings:{activeProvider:'openai',defaultLanguage:'hr',uiLanguage:'en',providers:{openai:{apiKey:'',model:'gpt-4o-mini'}},speech:{engine:'browser'}},privacy_consent_v1:true});});
+const page=await ctx.newPage();
+await page.goto('http://127.0.0.1:8742/');
+await page.waitForTimeout(2000);
+console.log('READY — right-click the page, click the Malisa item');
+setInterval(()=>{},10000);
