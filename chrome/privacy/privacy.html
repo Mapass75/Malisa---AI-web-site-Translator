@@ -21,7 +21,7 @@
   </head>
   <body>
     <h1>Privacy Policy — Malisa</h1>
-    <p class="updated">Last updated: June 18, 2026.</p>
+    <p class="updated">Last updated: November 4, 2026.</p>
 
     <p>
       Malisa - AI web site Translator ("Malisa", "extension") translates web pages using
@@ -30,8 +30,10 @@
 
     <h2>Data we process</h2>
     <ul>
-      <li><strong>Page text</strong> — extracted only when you click Translate. Sent to your chosen AI provider.</li>
-      <li><strong>API keys &amp; settings</strong> — stored locally in browser storage on your device. Never sent to our servers.</li>
+      <li><strong>Page text</strong> — read only when you click Translate page (popup) or Translate page with Malisa (right-click menu). Sent to your chosen translation provider. While the page stays translated, text that loads later is also sent, until you click Restore original.</li>
+<li><strong>Selected and typed text</strong> — sent to your chosen translation provider when you translate a selection or use the popup text box.</li>
+<li><strong>Text read aloud</strong> — sent to your chosen speech provider when you click Listen or Speak. With Browser voices it stays on your device.</li>
+      <li><strong>API keys &amp; settings</strong> — stored locally in the extension's storage on your device, without extra encryption. Each key is sent only to the provider it belongs to. Never sent to the developer.</li>
       <li><strong>Translation cache</strong> — stored locally for faster repeat translations.</li>
     </ul>
 
@@ -44,7 +46,7 @@
 
     <h2>Third parties (AI providers)</h2>
     <p>
-      When you translate, text is sent to the API of the provider you choose. Their privacy policies and terms apply.
+      When you translate or listen, text is sent directly to the API of the translation or speech provider you choose. Their privacy policies and terms apply.
       You are responsible for API keys and costs.
     </p>
 
@@ -52,7 +54,9 @@
     <ul>
       <li><strong>activeTab</strong> — access the current tab only when you use the extension.</li>
       <li><strong>storage</strong> — save settings and cache locally.</li>
-      <li><strong>host permissions</strong> — network calls only to configured AI provider APIs (and local Ollama).</li>
+<li><strong>scripting</strong> — load Malisa's own content script into the current tab when you start a translation.</li>
+<li><strong>contextMenus</strong> — the right-click items Translate with Malisa and Translate page with Malisa.</li>
+      <li><strong>host permissions</strong> — network calls only to the translation and speech provider APIs, and to Ollama or a self-hosted TTS server on your computer.</li>
     </ul>
 
     <h2>Retention &amp; deletion</h2>

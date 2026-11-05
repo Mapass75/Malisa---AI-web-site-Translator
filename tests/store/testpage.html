@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>Malisa test</title>
+<h1>Hello world</h1><p id="p1">The weather is beautiful today.</p>
+<button id="add">Add new content</button>
+<script>
+document.getElementById('add').onclick=()=>{const d=document.createElement('div');d.id='dyn';d.textContent='The library is open every day.';document.body.appendChild(d);};
+</script>

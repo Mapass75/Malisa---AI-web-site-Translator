@@ -1,6 +1,6 @@
 import browser from '../shared/browser.js';
 import { getSettings, saveSettings } from '../shared/storage.js';
-import { LANGUAGES, PROVIDER_LABELS, PROVIDERS, isProviderReady, FREE_TIER_INFO } from '../shared/types.js';
+import { LANGUAGES, PROVIDER_LABELS, PROVIDERS, isProviderReady, FREE_TIER_INFO, supportsTextTasks } from '../shared/types.js';
 import { escapeHtml } from '../shared/security.js';
 import { sendToActiveTab } from '../shared/tabs.js';
 import { getUiLanguage, t } from '../shared/i18n.js';
@@ -25,6 +25,24 @@ const listenInputBtn = document.getElementById('listenInputBtn');
 const listenOutputBtn = document.getElementById('listenOutputBtn');
 const stopInputBtn = document.getElementById('stopInputBtn');
 const stopOutputBtn = document.getElementById('stopOutputBtn');
+const modeButtons = document.querySelectorAll('.mode-btn');
+const langRow = document.getElementById('langRow');
+const summaryLengthRow = document.getElementById('summaryLengthRow');
+const summaryLengthSelect = document.getElementById('summaryLength');
+const textTaskNote = document.getElementById('textTaskNote');
+const textTaskUnsupported = document.getElementById('textTaskUnsupported');
+const textTaskUnsupportedMsg = document.getElementById('textTaskUnsupportedMsg');
+const textTaskSettingsLink = document.getElementById('textTaskSettingsLink');
+const textSpinner = document.getElementById('textSpinner');
+const textError = document.getElementById('textError');
+
+const TEXT_MODES = {
+  translate: { button: 'translateText', placeholder: 'translateTextPlaceholder', busy: 'translating' },
+  edit: { button: 'editTextBtn', placeholder: 'editPlaceholder', busy: 'editing' },
+  summarize: { button: 'summarizeBtn', placeholder: 'summarizePlaceholder', busy: 'summarizing' },
+};
+let textMode = 'translate';
+let textRunId = 0;
 
 let uiLang = 'en';
 let unwatchSystem = () => {};
@@ -50,6 +68,75 @@ function applyPopupI18n() {
   swapLangBtn.title = t('swapLanguages', uiLang);
   translateTextBtn.textContent = t('translateText', uiLang);
   copyTextBtn.textContent = t('copyText', uiLang);
+  document.getElementById('modeToggle').setAttribute('aria-label', t('textModes', uiLang));
+  document.getElementById('modeTranslate').textContent = t('modeTranslate', uiLang);
+  document.getElementById('modeEdit').textContent = t('modeEdit', uiLang);
+  document.getElementById('modeSummarize').textContent = t('modeSummarize', uiLang);
+  document.getElementById('labelSummaryLength').textContent = t('summaryLength', uiLang);
+  const selectedLength = summaryLengthSelect.value || 'medium';
+  summaryLengthSelect.replaceChildren(
+    ...['short', 'medium', 'detailed'].map(
+      (id) => new Option(t('summary' + id[0].toUpperCase() + id.slice(1), uiLang), id)
+    )
+  );
+  summaryLengthSelect.value = selectedLength;
+  textTaskSettingsLink.textContent = t('openSettings', uiLang);
+  textTaskNote.textContent = t('editKeepsLanguage', uiLang);
+  updateTextModeUi();
+}
+
+function showTextError(message) {
+  textError.textContent = message;
+  textError.classList.toggle('hidden', !message);
+}
+
+function setTextBusy(busy) {
+  textSpinner.hidden = !busy;
+  translateTextBtn.setAttribute('aria-busy', String(busy));
+}
+
+function clearTextResult() {
+  textRunId++;
+  setTextBusy(false);
+  textOutput.textContent = '';
+  copyTextBtn.disabled = true;
+  copyTextBtn.textContent = t('copyText', uiLang);
+  showTextError('');
+}
+
+function updateTextModeUi() {
+  const mode = TEXT_MODES[textMode];
+  modeButtons.forEach((btn) => {
+    const active = btn.dataset.mode === textMode;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', String(active));
+  });
+  langRow.hidden = textMode === 'edit';
+  sourceLanguageSelect.hidden = textMode === 'summarize';
+  swapLangBtn.hidden = textMode === 'summarize';
+  summaryLengthRow.hidden = textMode !== 'summarize';
+  textTaskNote.hidden = textMode !== 'edit';
+  translateTextBtn.textContent = t(mode.button, uiLang);
+  textInput.placeholder = t(mode.placeholder, uiLang);
+
+  const provider = providerSelect.value;
+  const unsupported = textMode !== 'translate' && provider && !supportsTextTasks(provider);
+  textTaskUnsupportedMsg.textContent = unsupported
+    ? t('textTaskUnsupported', uiLang, { provider: PROVIDER_LABELS[provider] ?? provider })
+    : '';
+  textTaskUnsupported.classList.toggle('hidden', !unsupported);
+  translateTextBtn.disabled = Boolean(unsupported) || textSpinner.hidden === false;
+}
+
+function setTextMode(mode) {
+  if (!TEXT_MODES[mode] || mode === textMode) return;
+  textMode = mode;
+  clearTextResult();
+  updateTextModeUi();
+}
+
+function outputLanguage() {
+  return textMode === 'edit' ? sourceLanguageSelect.value : textTargetSelect.value;
 }
 
 function setThemeButtons(activeTheme) {
@@ -271,6 +358,7 @@ async function init() {
   populateTextLanguages(settings.defaultLanguage);
   populateProviders(settings.activeProvider);
   providerSelect.value = settings.activeProvider;
+  updateTextModeUi();
   applyTranslatorTheme(settings.translatorTheme ?? 'system');
 
   themeButtons.forEach((btn) => {
@@ -338,38 +426,74 @@ async function init() {
     }
   });
 
+  modeButtons.forEach((btn) => btn.addEventListener('click', () => setTextMode(btn.dataset.mode)));
+  providerSelect.addEventListener('change', updateTextModeUi);
+  textTaskSettingsLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    browser.runtime.openOptionsPage();
+  });
+
   translateTextBtn.addEventListener('click', async () => {
     const text = textInput.value.trim();
     if (!text) return;
+    const mode = textMode;
     const provider = providerSelect.value;
+    showTextError('');
+    if (mode !== 'translate' && !supportsTextTasks(provider)) {
+      updateTextModeUi();
+      return;
+    }
     const settings = await getSettings();
     if (!isProviderReady(provider, settings.providers[provider])) {
       const hint = PROVIDERS[provider]?.apiKeyOptional
         ? t('setProviderUrl', uiLang)
         : t('enterApiKey', uiLang, { provider: PROVIDER_LABELS[provider] });
-      showStatus(hint, 'error');
+      showTextError(hint);
       return;
     }
 
+    const runId = ++textRunId;
     translateTextBtn.disabled = true;
-    textOutput.textContent = t('translating', uiLang);
+    setTextBusy(true);
+    copyTextBtn.disabled = true;
+    textOutput.textContent = t(TEXT_MODES[mode].busy, uiLang);
     try {
-      const response = await browser.runtime.sendMessage({
-        type: 'TRANSLATE_TEXT',
-        text,
-        targetLanguage: textTargetSelect.value,
-        sourceLanguage: sourceLanguageSelect.value,
-        provider,
-      });
-      if (!response?.ok) throw new Error(response?.error ?? 'Translation failed');
-      textOutput.textContent = response.translated;
+      const response =
+        mode === 'translate'
+          ? await browser.runtime.sendMessage({
+              type: 'TRANSLATE_TEXT',
+              text,
+              targetLanguage: textTargetSelect.value,
+              sourceLanguage: sourceLanguageSelect.value,
+              provider,
+            })
+          : await browser.runtime.sendMessage({
+              type: 'PROCESS_TEXT',
+              task: mode,
+              text,
+              targetLanguage: textTargetSelect.value,
+              length: summaryLengthSelect.value,
+              provider,
+            });
+      if (runId !== textRunId) return;
+      if (response?.code === 'unsupported') {
+        textOutput.textContent = '';
+        updateTextModeUi();
+        return;
+      }
+      if (!response?.ok) throw new Error(response?.error ?? t('textTaskFailed', uiLang));
+      textOutput.textContent = mode === 'translate' ? response.translated : response.result;
       copyTextBtn.disabled = false;
       copyTextBtn.textContent = t('copyText', uiLang);
     } catch (err) {
+      if (runId !== textRunId) return;
       textOutput.textContent = '';
-      showStatus(err.message, 'error');
+      showTextError(err.message || t('textTaskFailed', uiLang));
     } finally {
-      translateTextBtn.disabled = false;
+      if (runId === textRunId) {
+        setTextBusy(false);
+        updateTextModeUi();
+      }
     }
   });
 
@@ -389,7 +513,7 @@ async function init() {
 
   listenOutputBtn.addEventListener('click', () => {
     const text = textOutput.textContent.trim();
-    if (text) speak(text, textTargetSelect.value, listenOutputBtn, stopOutputBtn);
+    if (text) speak(text, outputLanguage(), listenOutputBtn, stopOutputBtn);
   });
 
   stopOutputBtn.addEventListener('click', stopSpeech);
@@ -402,7 +526,7 @@ async function init() {
         copyTextBtn.textContent = t('copyText', uiLang);
       }, 1500);
     } catch {
-      showStatus(t('copyFailed', uiLang), 'error');
+      showTextError(t('copyFailed', uiLang));
     }
   });
 }

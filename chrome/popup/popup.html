@@ -32,7 +32,12 @@
       </div>
       <section class="text-translate">
         <h2 id="textTranslateTitle" class="text-translate-title"></h2>
-        <div class="lang-row">
+        <div id="modeToggle" class="mode-toggle" role="tablist">
+          <button type="button" class="mode-btn active" role="tab" data-mode="translate" id="modeTranslate" aria-selected="true"></button>
+          <button type="button" class="mode-btn" role="tab" data-mode="edit" id="modeEdit" aria-selected="false"></button>
+          <button type="button" class="mode-btn" role="tab" data-mode="summarize" id="modeSummarize" aria-selected="false"></button>
+        </div>
+        <div id="langRow" class="lang-row">
           <select id="sourceLanguage" class="lang-select" aria-label="Source language"></select>
           <button id="swapLangBtn" class="icon-btn" type="button" title="Swap" aria-label="Swap languages">&#8646;</button>
           <select id="textTargetLanguage" class="lang-select" aria-label="Target language"></select>
@@ -44,9 +49,20 @@
             <button id="stopInputBtn" class="icon-btn" type="button" hidden><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg></button>
           </div>
         </div>
+        <div id="summaryLengthRow" class="summary-row" hidden>
+          <label id="labelSummaryLength" for="summaryLength"></label>
+          <select id="summaryLength" class="lang-select"></select>
+        </div>
+        <p id="textTaskNote" class="text-task-note" hidden></p>
+        <div id="textTaskUnsupported" class="status error hidden">
+          <span id="textTaskUnsupportedMsg"></span>
+          <a href="#" id="textTaskSettingsLink"></a>
+        </div>
         <div class="text-actions">
+          <span id="textSpinner" class="spinner" hidden aria-hidden="true"></span>
           <button id="translateTextBtn" class="btn primary btn-compact"></button>
         </div>
+        <div id="textError" class="status error hidden" role="alert"></div>
         <div class="text-box">
           <div id="textOutput" class="text-output" aria-live="polite"></div>
           <div class="text-actions">

@@ -277,3 +277,90 @@ footer a {
 .text-box .text-actions {
   margin-top: 4px;
 }
+
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--malisa-border);
+  border-radius: 8px;
+  background: var(--malisa-theme-idle);
+  color: var(--malisa-text);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mode-btn:hover {
+  border-color: var(--malisa-theme-active);
+}
+
+.mode-btn.active {
+  background: var(--malisa-theme-active);
+  border-color: var(--malisa-theme-active);
+  color: #fff;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--malisa-muted);
+}
+
+.summary-row .lang-select {
+  flex: 1;
+}
+
+.text-task-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--malisa-muted);
+}
+
+#textTaskUnsupported,
+#textError {
+  margin-top: 8px;
+}
+
+#textTaskUnsupported a {
+  display: inline-block;
+  margin-top: 4px;
+  color: inherit;
+  font-weight: 600;
+}
+
+.text-actions .spinner {
+  align-self: center;
+  margin-right: 8px;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--malisa-border);
+  border-top-color: var(--malisa-theme-active);
+  border-radius: 50%;
+  animation: malisa-spin 0.8s linear infinite;
+}
+
+.spinner[hidden] {
+  display: none;
+}
+
+@keyframes malisa-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.text-translate [hidden] {
+  display: none !important;
+}

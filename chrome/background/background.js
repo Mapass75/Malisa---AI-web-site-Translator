@@ -1,11 +1,11 @@
 import browser from '../shared/browser.js';
-import { getSettings } from '../shared/storage.js';
+import { getSettings, hasPrivacyConsent } from '../shared/storage.js';
 import { getCachedTranslations, cacheTranslations } from '../shared/cache.js';
 import { dedupeBlocks } from '../shared/dedupe.js';
-import { translate } from '../shared/providers.js';
+import { translate, processText, TEXT_TASKS, SUMMARY_LENGTHS } from '../shared/providers.js';
 import { chunkBlocks, runConcurrent } from '../shared/batcher.js';
 import { fetchModels, refreshAllModels } from '../shared/models.js';
-import { getProviderLimits, isProviderReady } from '../shared/types.js';
+import { PROVIDERS, getProviderLimits, isProviderReady, supportsTextTasks } from '../shared/types.js';
 import { getUiLanguage, t } from '../shared/i18n.js';
 import {
   assertTrustedSender,
@@ -20,6 +20,7 @@ import {
 import { fetchSpeech } from '../shared/tts.js';
 
 const CONTEXT_MENU_ID = 'malisa-translate-selection';
+const PAGE_MENU_ID = 'malisa-translate-page';
 let settingsCache = null;
 let settingsCacheTime = 0;
 const SETTINGS_TTL = 60000;
@@ -50,6 +51,11 @@ async function setupContextMenu() {
     title: t('contextMenuTranslate', lang),
     contexts: ['selection'],
   });
+  browser.contextMenus.create({
+    id: PAGE_MENU_ID,
+    title: t('contextMenuTranslatePage', lang),
+    contexts: ['page'],
+  });
 }
 
 browser.runtime.onInstalled.addListener(() => {
@@ -61,6 +67,10 @@ browser.runtime.onStartup.addListener(() => {
   setupContextMenu().catch(() => {});
   getCachedSettings();
 });
+
+// MV3: onStartup does not always wake the service worker, so also (re)create the
+// menus on every worker start — removeAll keeps this idempotent.
+setupContextMenu().catch(() => {});
 function notifyTab(tabId, message, frameId) {
   if (!tabId) return;
   browser.tabs
@@ -123,7 +133,24 @@ async function translateBatchWithRetry(provider, translateOpts, batch, retried =
   }
 }
 
+function isDomainSkipped(url, skipDomains) {
+  if (!Array.isArray(skipDomains) || !skipDomains.length) return false;
+  let host = '';
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return skipDomains.some((d) => {
+    const dom = String(d).trim().toLowerCase();
+    return dom && (host === dom || host.endsWith('.' + dom));
+  });
+}
+
 async function resolveProvider(settings, provider = settings.activeProvider) {
+  if (!(await hasPrivacyConsent())) {
+    throw new Error('Privacy consent required. Open Settings to continue.');
+  }
   if (!isValidProvider(provider)) {
     throw new Error('Invalid AI provider');
   }
@@ -236,6 +263,8 @@ async function translateAllBlocks(blocks, targetLanguage, tabId, frameId) {
 
   const safeBlocks = validateBlocks(blocks);
   const settings = await getCachedSettings();
+  const tab = await browser.tabs.get(tabId).catch(() => null);
+  if (tab?.url && isDomainSkipped(tab.url, settings.skipDomains)) return;
   const { provider, translateOpts, cacheEnabled } = await resolveProvider(settings);
 
   const limits = getProviderLimits(provider, settings);
@@ -299,7 +328,69 @@ async function translateSelection(text, tabId) {
   });
 }
 
+const SELECTION_TASKS = ['summarize', 'explain'];
+
+// "Summarize this" / "Explain this" in the selection popup: only the selected text is sent,
+// always with the saved provider (never switched silently).
+async function runSelectionAction(task, text) {
+  if (!SELECTION_TASKS.includes(task)) throw new Error('Invalid action');
+  const trimmed = validateSelectionText(text);
+  const settings = await getCachedSettings();
+  const providerId = settings.activeProvider;
+  if (!supportsTextTasks(providerId)) {
+    return { ok: false, code: 'unsupported', provider: PROVIDERS[providerId]?.label ?? String(providerId) };
+  }
+  const targetLanguage = isValidLanguage(settings.defaultLanguage) ? settings.defaultLanguage : 'en';
+  const { provider, translateOpts } = await resolveProvider(settings, providerId);
+  const result = await processText(provider, {
+    ...translateOpts,
+    task,
+    text: trimmed,
+    targetLanguage,
+    length: 'medium',
+  });
+  return { ok: true, result, targetLanguage };
+}
+
+function showTabNotice(tabId, text) {
+  browser.action.setBadgeText({ tabId, text: text ? '!' : '' }).catch(() => {});
+  if (text) browser.action.setBadgeBackgroundColor({ tabId, color: '#d93025' }).catch(() => {});
+  browser.action.setTitle({ tabId, title: text || '' }).catch(() => {});
+}
+
+// Same flow as the popup's "Translate page" button, using the saved provider and target language.
+async function translatePageFromMenu(tabId) {
+  showTabNotice(tabId, '');
+  const [settings, lang] = await Promise.all([getSettings(), getUiLanguage()]);
+  const provider = settings.activeProvider;
+  const targetLanguage = settings.defaultLanguage;
+  let setupError = '';
+  if (!isProviderReady(provider, settings.providers?.[provider])) {
+    setupError = PROVIDERS[provider]?.apiKeyOptional
+      ? t('setProviderUrl', lang)
+      : t('enterApiKey', lang, { provider: PROVIDERS[provider]?.label ?? provider });
+  } else if (!isValidLanguage(targetLanguage)) {
+    setupError = 'Invalid target language';
+  }
+  if (setupError) {
+    await notifyTabEnsured(tabId, { type: 'SELECTION_ERROR', error: setupError }).catch(() =>
+      showTabNotice(tabId, setupError)
+    );
+    browser.runtime.openOptionsPage().catch(() => {});
+    return;
+  }
+  try {
+    await notifyTabEnsured(tabId, { type: 'TRANSLATE_PAGE', targetLanguage });
+  } catch {
+    showTabNotice(tabId, t('contextMenuPageUnavailable', lang));
+  }
+}
+
 browser.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === PAGE_MENU_ID) {
+    if (tab?.id) translatePageFromMenu(tab.id).catch(() => {});
+    return;
+  }
   if (info.menuItemId !== CONTEXT_MENU_ID || !tab?.id) return;
   const text = info.selectionText?.trim();
   if (!text) return;
@@ -350,6 +441,45 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
         message.sourceLanguage
       )
         .then((translated) => sendResponse({ ok: true, translated }))
+        .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
+    } catch (err) {
+      sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) });
+    }
+    return true;
+  }
+
+  if (message.type === 'SELECTION_ACTION') {
+    runSelectionAction(message.task, message.text)
+      .then((response) => sendResponse(response))
+      .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
+    return true;
+  }
+
+  if (message.type === 'PROCESS_TEXT') {
+    try {
+      const text = validatePopupText(message.text);
+      if (!TEXT_TASKS.includes(message.task)) throw new Error('Invalid text task');
+      if (message.task !== 'edit' && !isValidLanguage(message.targetLanguage)) {
+        throw new Error('Invalid target language');
+      }
+      const length = SUMMARY_LENGTHS.includes(message.length) ? message.length : 'medium';
+      if (!isValidProvider(message.provider)) throw new Error('Invalid AI provider');
+      if (!supportsTextTasks(message.provider)) {
+        sendResponse({ ok: false, code: 'unsupported', error: 'Provider does not support this action' });
+        return false;
+      }
+      getCachedSettings()
+        .then((settings) => resolveProvider(settings, message.provider))
+        .then(({ provider, translateOpts }) =>
+          processText(provider, {
+            ...translateOpts,
+            task: message.task,
+            text,
+            targetLanguage: message.targetLanguage,
+            length,
+          })
+        )
+        .then((result) => sendResponse({ ok: true, result }))
         .catch((err) => sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) }));
     } catch (err) {
       sendResponse({ ok: false, error: sanitizeErrorMessage(err.message) });
