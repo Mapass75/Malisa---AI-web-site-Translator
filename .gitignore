@@ -1,9 +1,6 @@
 node_modules/
-dist/
-release/malisa-chrome-2.0.0/
-package-lock.json
+.devin/
+release/
 *.log
-.DS_Store
 Thumbs.db
-malisa-icon-source.png
-assets/*-source.png
+Desktop.ini

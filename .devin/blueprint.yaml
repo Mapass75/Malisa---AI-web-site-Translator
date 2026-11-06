@@ -1,9 +1,0 @@
-maintenance: |
-  . ~/.nvm/nvm.sh && npm install && npm install --no-save playwright
-knowledge:
-  - name: build
-    contents: |
-      # npm run build → dist/chrome + dist/firefox; build:chrome/build:firefox also zip into release/
-  - name: lint
-    contents: |
-      # npx web-ext lint --source-dir dist/firefox
