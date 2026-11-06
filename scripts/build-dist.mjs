@@ -9,6 +9,7 @@
  *   dist/firefox/                   unpacked Firefox extension (unsigned, for AMO)
  *   release/malisa-chrome-<v>.zip   Chrome Web Store upload package
  *   release/malisa-firefox-<v>.zip  AMO submission package (unsigned)
+ *   release/malisa-firefox-<v>.xpi  AMO / about:debugging install package
  *   release/malisa-source-<v>.zip   reviewable source + build instructions
  *
  * manifest.json sits at the root of every ZIP.
@@ -133,16 +134,29 @@ ffManifest.browser_specific_settings = {
 writeFileSync(join(ffDir, 'manifest.json'), JSON.stringify(ffManifest, null, 2) + '\n');
 assertNoForbiddenNames(ffDir);
 
-// ---------- ZIPs (bsdtar ships with Windows 10+) ----------
+// ---------- ZIPs ----------
+// PATH `tar` here is GNU tar, which writes a tar archive regardless of the
+// file extension — that produced .zip/.xpi files that are really tar and are
+// rejected by Chrome Web Store, AMO, and Firefox's nsIZipReader. Use the
+// bsdtar that ships in System32 and force the zip format explicitly.
+// Entries are passed individually so archive names have no './' prefix.
+const BSDTAR = process.env.SystemRoot
+  ? join(process.env.SystemRoot, 'System32', 'tar.exe')
+  : 'tar';
+
 function zipDir(srcDir, outFile) {
   rmSync(outFile, { force: true });
-  execFileSync('tar', ['--force-local', '-acf', outFile, '-C', srcDir, '.'], { stdio: 'inherit' });
+  const entries = readdirSync(srcDir);
+  execFileSync(BSDTAR, ['--format', 'zip', '-cf', outFile, '-C', srcDir, ...entries], {
+    stdio: 'inherit',
+  });
 }
 
 mkdirSync(RELEASE, { recursive: true });
 const zips = [
   [chromeDir, join(RELEASE, `malisa-chrome-${VERSION}.zip`)],
   [ffDir, join(RELEASE, `malisa-firefox-${VERSION}.zip`)],
+  [ffDir, join(RELEASE, `malisa-firefox-${VERSION}.xpi`)],
 ];
 for (const [dir, out] of zips) zipDir(dir, out);
 
