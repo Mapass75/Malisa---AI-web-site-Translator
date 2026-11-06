@@ -1,16 +1,7 @@
-<table>
-  <tr>
-    <td width="300" valign="middle">
-      <img src="assets/malisa-source.png" width="280" alt="Malisa promotional artwork — a white cat with a purple AI theme" />
-    </td>
-    <td valign="middle">
-      <h1>Malisa</h1>
-      <p><strong>Read the web in your language. Ask questions, understand more, and listen when you prefer.</strong></p>
-      <p>Malisa is a browser assistant that lives on the page you are reading. It can translate a whole page or just a passage, summarize long articles, explain unfamiliar text, and chat with you about what you are looking at — so you do not have to keep copying things into another app.</p>
-      <p><sub>v2.5.6 · Chrome · Firefox 142+</sub></p>
-    </td>
-  </tr>
-</table>
+<h1><img src="assets/malisa-source.png" width="56" alt="Malisa icon" /> Malisa</h1>
+<p><strong>Read the web in your language. Ask questions, understand more, and listen when you prefer.</strong></p>
+<p>Malisa is a browser assistant that lives on the page you are reading. It can translate a whole page or just a passage, summarize long articles, explain unfamiliar text, and chat with you about what you are looking at — so you do not have to keep copying things into another app.</p>
+<p><sub>v2.5.6 · Chrome · Firefox 142+</sub></p>
 
 **[Features](#what-you-can-do) · [Screenshots](#screenshots) · [Getting started](#getting-started) · [Providers & costs](#providers-and-costs) · [Privacy](#privacy) · [Installation](#installation)** · [Build docs](docs/BUILD.md)
 

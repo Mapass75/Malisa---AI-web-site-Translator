@@ -28,8 +28,10 @@ sensitive file (`.env*`, `*secret*`, `*credential*`) is found in the output.
 
 ## Icons
 
-`node scripts/generate-icons.mjs` regenerates `icons/icon{16,32,48,128}.png`
-from `assets/malisa-source.png` using sharp. Only needed when the artwork changes.
+`icons/icon{16,32,48,128}.png` are pre-generated and committed — no build
+step needed. `node scripts/generate-icons.mjs` can regenerate them from a
+source artwork (`assets/malisa-source.png`, not shipped in this repo); only
+needed if the icon artwork ever changes.
 
 ## Verify
 

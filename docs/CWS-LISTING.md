@@ -57,7 +57,6 @@ functionality. Suggested short description (≤132 chars):
 - [ ] Store listing assets: 1280×800 promo tile, 440×280 small tile, screenshots **[OWNER]**
 - [ ] Support URL / contact email **[OWNER]**
 - [ ] Confirm category (likely "Productivity" or "Tools") and language list
-- [ ] Review `assets/malisa-source.png` usage rights for listing screenshots
 
 ## Known review risks (honest assessment)
 
