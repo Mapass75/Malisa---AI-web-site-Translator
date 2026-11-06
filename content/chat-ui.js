@@ -681,10 +681,17 @@ if (window.top === window.self && !globalThis.__MALISA_CHAT_INIT__) {
 
   function openChatbotSettings() {
     const url = browser.runtime.getURL('options/options.html') + '#sec-chatbot';
+    // Content scripts cannot use the tabs API — ask the background worker to
+    // open the exact options URL, falling back to openOptionsPage().
+    const fallback = () => {
+      Promise.resolve()
+        .then(() => browser.runtime.openOptionsPage())
+        .catch((e) => console.warn('[malisa] openOptionsPage failed:', e));
+    };
     try {
-      browser.tabs.create({ url }).catch(() => browser.runtime.openOptionsPage().catch(() => {}));
+      Promise.resolve(browser.runtime.sendMessage({ type: 'OPEN_OPTIONS_PAGE', url })).catch(fallback);
     } catch {
-      browser.runtime.openOptionsPage().catch(() => {});
+      fallback();
     }
   }
 

@@ -718,5 +718,26 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {  try 
     return true;
   }
 
+  if (message.type === 'OPEN_OPTIONS_PAGE') {
+    const ownPrefix = browser.runtime.getURL('');
+    const url =
+      typeof message.url === 'string' && message.url.startsWith(ownPrefix)
+        ? message.url
+        : browser.runtime.getURL('options/options.html');
+    (async () => {
+      try {
+        await browser.tabs.create({ url });
+      } catch {
+        try {
+          await browser.runtime.openOptionsPage();
+        } catch (e) {
+          console.warn('[malisa] openOptionsPage failed:', e);
+        }
+      }
+    })();
+    sendResponse({ ok: true });
+    return false;
+  }
+
   return false;
 });
